@@ -1,0 +1,117 @@
+legacybridge-web — React SPA (Vite 6 + React 18 + TypeScript + React Router v6)
+================================================================================
+
+Stack
+-----
+  - Vite 6.4
+  - React 18.3
+  - React Router v6.28
+  - TypeScript 5.6
+  - CSS variables (no external UI library)
+  - Vite proxy → backend http://localhost:5064
+
+Dev
+---
+  cd legacybridge-web
+  npm install
+  npm run dev      → http://localhost:5173
+  npm run build    → dist/
+
+src/
+├── main.tsx                        Entry point: BrowserRouter + AuthProvider + App
+├── App.tsx                         Role-based routing + RequireAuth guard
+├── vite-env.d.ts
+│
+├── style/
+│   └── app.css                     Global CSS — variables, layout, table, modal, buttons, forms, pills
+│
+├── api/                            Backend API wrappers (fetch + JWT header)
+│   ├── client.ts                   apiFetch: injects Authorization header, handles 204/401
+│   ├── auth.ts                     login() POST /auth/login, extractClaims() JWT decode
+│   ├── types.ts                    TypeScript interfaces: Customer, UserDto, LegacySource,
+│   │                               AccessPlan, AccessPlanSummary, AccessRule, UserRole, etc.
+│   ├── customers.ts                customersApi: getAll, getById, create, update, delete
+│   ├── users.ts                    usersApi: getAll, getById, getPlans, create, update,
+│   │                               changePassword, delete + roleNum helper
+│   ├── sources.ts                  sourcesApi: getAll, getAccessible, getById, create,
+│   │                               update, upsertAuth, delete, call
+│   │                               systemTypeLabels: { 1: OpenEdge SOAP, ... }
+│   └── plans.ts                    plansApi: getAll, getById, create, update, delete,
+│                                   addRule, deleteRule, assignUser, revokeUser
+│
+├── ctx/
+│   └── auth.tsx                    AuthProvider: login/logout, localStorage token,
+│                                   useAuth() hook, homeFor(role) helper
+│
+├── components/
+│   └── Shell.tsx                   App shell: sidebar + <Outlet />
+│                                   Role-aware nav items, avatar, logout button
+│
+└── pages/
+    ├── Login.tsx                   Email/password form → redirects to role home
+    ├── Viewer.tsx                  Lock screen for Viewer role (no features)
+    │
+    ├── admin/                      Role: Admin only
+    │   ├── Dashboard.tsx           Stats: customers / users / sources / plans counts
+    │   ├── Customers.tsx           CRUD: list + create/edit modal + delete
+    │   ├── Users.tsx               CRUD: list + create/edit modal + change password + delete
+    │   │                           Role selector (Admin/Manager/Member/Viewer)
+    │   │                           Customer selector (on create)
+    │   ├── Sources.tsx             CRUD: list + create/edit modal + auth config modal + delete
+    │   └── Plans.tsx               CRUD: list + create/edit modal + rules editor + user assign + delete
+    │
+    ├── manager/                    Role: Manager only
+    │   ├── Dashboard.tsx           Scoped stats (own resources) + isolation notice
+    │   ├── Users.tsx               CRUD own users (no Admin role option, no customer selector)
+    │   ├── Sources.tsx             CRUD own sources (customerId auto-set from JWT)
+    │   ├── Plans.tsx               CRUD own plans + rules editor + user assign
+    │   └── Call.tsx                Legacy method dispatcher (accessible sources)
+    │
+    └── member/                     Role: Member only
+        ├── Sources.tsx             Read-only list of accessible sources (via /legacy-sources/accessible)
+        ├── Plans.tsx               View assigned plans + rules (read-only)
+        └── Call.tsx                Legacy method dispatcher (accessible sources)
+
+Routes
+------
+  /login                → Login.tsx
+  /admin/dashboard      → admin/Dashboard.tsx
+  /admin/customers      → admin/Customers.tsx
+  /admin/users          → admin/Users.tsx
+  /admin/sources        → admin/Sources.tsx
+  /admin/plans          → admin/Plans.tsx
+  /manager/dashboard    → manager/Dashboard.tsx
+  /manager/users        → manager/Users.tsx
+  /manager/sources      → manager/Sources.tsx
+  /manager/plans        → manager/Plans.tsx
+  /manager/call         → manager/Call.tsx
+  /member/sources       → member/Sources.tsx
+  /member/plans         → member/Plans.tsx
+  /member/call          → member/Call.tsx
+  /viewer               → Viewer.tsx
+
+Role → Home
+-----------
+  Admin   → /admin/dashboard
+  Manager → /manager/dashboard
+  Member  → /member/sources
+  Viewer  → /viewer
+
+Auth
+----
+  JWT stored in localStorage under key "lb_token"
+  Claims decoded from token: nameid → userId, customerId, role (ClaimTypes.Role)
+  401 responses → automatic redirect to /login
+
+Manager isolation
+-----------------
+  Manager sees only resources with OwnerManagerId = their userId (set on backend at creation)
+  Manager cannot create users with Admin role
+  Manager's customerId is injected automatically on create (from JWT claim)
+  Dashboard shows isolation notice banner
+
+Build output
+------------
+  dist/index.html                0.40 kB
+  dist/assets/index-*.css       10.55 kB  (gzip: 2.73 kB)
+  dist/assets/index-*.js       227.27 kB  (gzip: 63.94 kB)

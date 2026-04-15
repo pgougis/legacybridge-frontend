@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lb-web
+  namespace: default
+  labels:
+    app: lb-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lb-web
+  template:
+    metadata:
+      labels:
+        app: lb-web
+    spec:
+      containers:
+        - name: lb-web
+          image: lb-web:local
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"

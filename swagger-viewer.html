@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Swagger — LegacyBridge</title>
+  <link rel="stylesheet" href="/node_modules/swagger-ui-dist/swagger-ui.css" />
+  <style>body { margin: 0; }</style>
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="/node_modules/swagger-ui-dist/swagger-ui-bundle.js"></script>
+  <script>
+    const params  = new URLSearchParams(window.location.search)
+    const specUrl = params.get('url') || ''
+    const token   = params.get('token') || ''
+
+    fetch(specUrl, {
+      headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+    })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status)
+      return r.json()
+    })
+    .then(function(spec) {
+      SwaggerUIBundle({
+        spec: spec,
+        dom_id: '#swagger-ui',
+        presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+        layout: 'BaseLayout',
+        deepLinking: false,
+        validatorUrl: null,
+        displayRequestDuration: true,
+        docExpansion: 'none',
+        defaultModelsExpandDepth: -1,
+        requestInterceptor: function(req) {
+          if (token) req.headers['Authorization'] = 'Bearer ' + token
+          return req
+        }
+      })
+    })
+    .catch(function(e) {
+      document.getElementById('swagger-ui').innerHTML =
+        '<div style="padding:32px;color:red;font-family:monospace">Erreur : ' + e.message + '</div>'
+    })
+  </script>
+</body>
+</html>
