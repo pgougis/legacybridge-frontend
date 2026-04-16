@@ -1,42 +1,50 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
-import { login as apiLogin, extractClaims } from '../api/auth'
+import { login as apiLogin, impersonate as apiImpersonate, extractClaims } from '../api/auth'
 import type { UserRole } from '../api/types'
 
 interface AuthUser {
   userId: string
   customerId: string
   role: UserRole
+  email: string
 }
 
 interface AuthCtx {
   user: AuthUser | null
   token: string | null
+  isImpersonating: boolean
+  impersonatedEmail: string | null
   login: (email: string, password: string) => Promise<void>
   logout: () => void
+  impersonate: (userId: string, email: string) => Promise<void>
+  exitImpersonation: () => void
 }
 
 const Ctx = createContext<AuthCtx>(null!)
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const VALID_ROLES: UserRole[] = ['Admin', 'Manager', 'Member', 'Viewer']
+const VALID_ROLES: UserRole[] = ['Admin', 'Manager', 'Member', 'Viewer']
 
-  const [token, setToken] = useState<string | null>(() => {
+function parseUser(t: string, email?: string): AuthUser | null {
+  const c = extractClaims(t)
+  if (!VALID_ROLES.includes(c.role as UserRole)) return null
+  return {
+    userId: c.userId,
+    customerId: c.customerId,
+    role: c.role as UserRole,
+    email: email ?? localStorage.getItem('lb_email') ?? '',
+  }
+}
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [token, setToken]                   = useState<string | null>(() => localStorage.getItem('lb_token'))
+  const [user, setUser]                     = useState<AuthUser | null>(() => {
     const t = localStorage.getItem('lb_token')
-    if (!t) return null
-    const c = extractClaims(t)
-    if (!VALID_ROLES.includes(c.role as UserRole)) {
-      localStorage.removeItem('lb_token')
-      return null
-    }
-    return t
+    return t ? parseUser(t) : null
   })
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    const t = localStorage.getItem('lb_token')
-    if (!t) return null
-    const c = extractClaims(t)
-    if (!VALID_ROLES.includes(c.role as UserRole)) return null
-    return { userId: c.userId, customerId: c.customerId, role: c.role as UserRole }
-  })
+  const [originalToken, setOriginalToken]   = useState<string | null>(() => localStorage.getItem('lb_original_token'))
+  const [impersonatedEmail, setImpersonatedEmail] = useState<string | null>(() => localStorage.getItem('lb_impersonated_email'))
+
+  const isImpersonating = originalToken !== null
 
   useEffect(() => {
     if (token) localStorage.setItem('lb_token', token)
@@ -45,17 +53,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(async (email: string, password: string) => {
     const t = await apiLogin(email, password)
-    const c = extractClaims(t)
+    localStorage.setItem('lb_email', email)
     setToken(t)
-    setUser({ userId: c.userId, customerId: c.customerId, role: c.role as UserRole })
+    setUser(parseUser(t, email)!)
+    setOriginalToken(null)
+    setImpersonatedEmail(null)
   }, [])
 
   const logout = useCallback(() => {
     setToken(null)
     setUser(null)
+    setOriginalToken(null)
+    setImpersonatedEmail(null)
+    localStorage.removeItem('lb_original_token')
+    localStorage.removeItem('lb_impersonated_email')
   }, [])
 
-  return <Ctx.Provider value={{ user, token, login, logout }}>{children}</Ctx.Provider>
+  const impersonate = useCallback(async (userId: string, email: string) => {
+    const res = await apiImpersonate(userId)
+    const saved = token
+    if (!localStorage.getItem('lb_original_token') && saved) {
+      localStorage.setItem('lb_original_token', saved)
+    }
+    localStorage.setItem('lb_impersonated_email', email)
+    setOriginalToken(prev => prev ?? saved)
+    setToken(res.token)
+    setUser(parseUser(res.token)!)
+    setImpersonatedEmail(email)
+  }, [token])
+
+  const exitImpersonation = useCallback(() => {
+    if (!originalToken) return
+    setToken(originalToken)
+    setUser(parseUser(originalToken)!)
+    setOriginalToken(null)
+    setImpersonatedEmail(null)
+    localStorage.removeItem('lb_original_token')
+    localStorage.removeItem('lb_impersonated_email')
+  }, [originalToken])
+
+  return (
+    <Ctx.Provider value={{ user, token, isImpersonating, impersonatedEmail, login, logout, impersonate, exitImpersonation }}>
+      {children}
+    </Ctx.Provider>
+  )
 }
 
 export const useAuth = () => useContext(Ctx)

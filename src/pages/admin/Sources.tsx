@@ -67,7 +67,7 @@ export default function AdminSources() {
   function openSwagger(id: string) {
     const token = localStorage.getItem('lb_token') ?? ''
     const url = encodeURIComponent(`/legacy/discovery/${id}/swagger.json`)
-    window.open(`/swagger-viewer.html?url=${url}&token=${encodeURIComponent(token)}`, '_blank')
+    window.open(`/lb-explorer.html?url=${url}&token=${encodeURIComponent(token)}`, '_blank')
   }
 
   const custName = (id: string) => customers.find(c => c.id === id)?.name ?? id.slice(0, 8)
@@ -87,7 +87,7 @@ export default function AdminSources() {
         </div>
         <table>
           <thead>
-            <tr><th>URL</th><th>Type</th><th>Customer</th><th>Auth</th><th>Created</th><th></th></tr>
+            <tr><th>URL</th><th>Type</th><th>Customer</th><th>Manager</th><th>Auth</th><th>Created</th><th></th></tr>
           </thead>
           <tbody>
             {filtered.map(s => (
@@ -95,6 +95,7 @@ export default function AdminSources() {
                 <td style={{ fontFamily: 'monospace', fontSize: 11 }}>{s.systemUrl}</td>
                 <td><span className="pill gray">{systemTypeLabels[s.systemType as unknown as number] ?? s.systemType}</span></td>
                 <td className="sub">{custName(s.customerId)}</td>
+                <td className="sub">{s.ownerManagerEmail ?? <span className="pill gray">—</span>}</td>
                 <td>{s.authConfig ? <span className="pill green">Configured</span> : <span className="pill gray">None</span>}</td>
                 <td className="sub">{new Date(s.createdAt).toLocaleDateString()}</td>
                 <td>
@@ -108,7 +109,7 @@ export default function AdminSources() {
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={6}><div className="empty"><div className="icon">🔌</div>No sources found</div></td></tr>
+              <tr><td colSpan={7}><div className="empty"><div className="icon">🔌</div>No sources found</div></td></tr>
             )}
           </tbody>
         </table>

@@ -1,7 +1,12 @@
 import { api } from './client'
 import type { AccessPlan, AccessPlanSummary, AccessRule } from './types'
 
+export interface PlanAssignedUser {
+  userId: string; email: string; firstName: string; lastName: string
+}
+
 export const plansApi = {
+  getPlanUsers: (planId: string) => api.get<PlanAssignedUser[]>(`/access-plans/${planId}/users`),
   getAll:   () => api.get<AccessPlanSummary[]>('/access-plans'),
   getById:  (id: string) => api.get<AccessPlan>(`/access-plans/${id}`),
   create: (body: { name: string; description?: string; customerId: string; isActive: boolean }) =>
@@ -10,7 +15,7 @@ export const plansApi = {
     api.put<AccessPlan>(`/access-plans/${id}`, { id, ...body }),
   delete: (id: string) => api.delete<null>(`/access-plans/${id}`),
 
-  addRule: (planId: string, body: { methodPattern: string; legacySourceId?: string; effect: number }) =>
+  addRule: (planId: string, body: { methodPattern: string; legacySourceId?: string; effect: string }) =>
     api.post<AccessRule>(`/access-plans/${planId}/rules`, { accessPlanId: planId, ...body }),
   deleteRule: (planId: string, ruleId: string) =>
     api.delete<null>(`/access-plans/${planId}/rules/${ruleId}`),

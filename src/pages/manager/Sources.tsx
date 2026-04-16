@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { sourcesApi, systemTypeLabels } from '../../api/sources'
+import type { SourceAssignedUser } from '../../api/sources'
 import { useAuth } from '../../ctx/auth'
 import type { LegacySource } from '../../api/types'
 
@@ -7,7 +8,8 @@ export default function ManagerSources() {
   const { user } = useAuth()
   const [rows, setRows]         = useState<LegacySource[]>([])
   const [search, setSearch]     = useState('')
-  const [modal, setModal]       = useState<'create' | 'edit' | 'auth' | null>(null)
+  const [modal, setModal]       = useState<'create' | 'edit' | 'auth' | 'users' | null>(null)
+  const [assignedUsers, setAssignedUsers] = useState<SourceAssignedUser[]>([])
   const [editing, setEditing]   = useState<LegacySource | null>(null)
   const [form, setForm]         = useState({ systemType: 1, systemUrl: '' })
   const [authForm, setAuthForm] = useState({ authType: 'Basic', username: '', password: '' })
@@ -54,10 +56,17 @@ export default function ManagerSources() {
     try { await sourcesApi.delete(id); load() } catch { alert('Delete failed.') }
   }
 
+  async function openUsers(s: LegacySource) {
+    setEditing(s)
+    const users = await sourcesApi.getAssignedUsers(s.id).catch(() => [])
+    setAssignedUsers(users)
+    setModal('users')
+  }
+
   function openSwagger(id: string) {
     const token = localStorage.getItem('lb_token') ?? ''
     const url = encodeURIComponent(`/legacy/discovery/${id}/swagger.json`)
-    window.open(`/swagger-viewer.html?url=${url}&token=${encodeURIComponent(token)}`, '_blank')
+    window.open(`/lb-explorer.html?url=${url}&token=${encodeURIComponent(token)}`, '_blank')
   }
 
   return (
@@ -86,6 +95,7 @@ export default function ManagerSources() {
                 <td className="sub">{new Date(s.createdAt).toLocaleDateString()}</td>
                 <td>
                   <div className="actions">
+                    <button className="btn btn-outline btn-sm" onClick={() => openUsers(s)}>👤 Users</button>
                     <button className="btn btn-outline btn-sm" onClick={() => openSwagger(s.id)}>Swagger</button>
                     <button className="btn btn-outline btn-sm" onClick={() => openEdit(s)}>Edit</button>
                     <button className="btn btn-outline btn-sm" style={{ color: 'var(--blue)' }} onClick={() => openAuth(s)}>Auth</button>
@@ -124,6 +134,40 @@ export default function ManagerSources() {
             <div className="modal-footer">
               <button className="btn btn-outline" onClick={() => setModal(null)}>Cancel</button>
               <button className="btn btn-primary" onClick={handleSave}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modal === 'users' && editing && (
+        <div className="modal-backdrop" onClick={() => setModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
+              <h2>Users with access</h2>
+              <button className="modal-close" onClick={() => setModal(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="sub" style={{ fontSize: 11, marginBottom: 12 }}>{editing.systemUrl}</div>
+              {assignedUsers.length === 0
+                ? <div className="empty"><div className="icon">👤</div>No users have access to this source yet</div>
+                : <table>
+                    <thead>
+                      <tr><th>User</th><th>Email</th><th>Via Plan</th></tr>
+                    </thead>
+                    <tbody>
+                      {assignedUsers.map(u => (
+                        <tr key={`${u.userId}-${u.planId}`}>
+                          <td>{u.firstName} {u.lastName}</td>
+                          <td className="sub">{u.email}</td>
+                          <td><span className="pill blue">{u.planName}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+              }
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={() => setModal(null)}>Close</button>
             </div>
           </div>
         </div>

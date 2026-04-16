@@ -1,6 +1,6 @@
 import { api } from './client'
 
-export type UsagePeriod = 'today' | 'week' | 'month' | 'year' | '3years'
+export type UsagePeriod = 'today' | 'month' | 'year' | '3years'
 
 export interface UsagePoint {
   bucket: string   // ISO datetime

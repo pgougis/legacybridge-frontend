@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { usersApi, roleNum } from '../../api/users'
 import { customersApi } from '../../api/customers'
+import { useAuth, homeFor } from '../../ctx/auth'
 import type { UserDto, UserRole, Customer } from '../../api/types'
 import Usage from '../shared/Usage'
 
@@ -11,6 +13,8 @@ const roleClass: Record<UserRole, string> = {
 }
 
 export default function AdminUsers() {
+  const { impersonate } = useAuth()
+  const navigate = useNavigate()
   const [rows, setRows]           = useState<UserDto[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [search, setSearch]       = useState('')
@@ -22,6 +26,7 @@ export default function AdminUsers() {
   })
   const [pwd, setPwd] = useState('')
   const [err, setErr] = useState('')
+  const [confirmReset, setConfirmReset] = useState<string | null>(null)
 
   function load() { usersApi.getAll().then(setRows).catch(() => {}) }
   useEffect(() => {
@@ -60,7 +65,10 @@ export default function AdminUsers() {
         })
       }
       setModal(null); load()
-    } catch { setErr('Save failed.') }
+    } catch (e: unknown) {
+      try { setErr(JSON.parse((e as Error).message)?.detail || 'Save failed.') }
+      catch { setErr('Save failed.') }
+    }
   }
 
   async function handlePwd() {
@@ -74,6 +82,17 @@ export default function AdminUsers() {
     try { await usersApi.delete(id); load() } catch { alert('Delete failed.') }
   }
 
+  async function handleResetUsage(id: string) {
+    if (confirmReset !== id) { setConfirmReset(id); return }
+    setConfirmReset(null)
+    try { await usersApi.resetUsage(id); load() } catch { alert('Reset failed.') }
+  }
+
+  async function handleImpersonate(u: UserDto) {
+    await impersonate(u.id, u.email)
+    navigate(homeFor(u.role))
+  }
+
   const custName = (id: string) => customers.find(c => c.id === id)?.name ?? id.slice(0, 8)
 
   function limitBadge(u: UserDto) {
@@ -85,7 +104,6 @@ export default function AdminUsers() {
     <div className="page">
       <div className="page-hd">
         <div><h1>Users</h1><p>All platform users</p></div>
-        <button className="btn btn-primary" onClick={openCreate}>+ New User</button>
       </div>
 
       <div className="card">
@@ -113,6 +131,15 @@ export default function AdminUsers() {
                     <button className="btn btn-outline btn-sm" onClick={() => openEdit(u)}>Edit</button>
                     <button className="btn btn-outline btn-sm" onClick={() => { setEditing(u); setPwd(''); setErr(''); setModal('pwd') }}>Pwd</button>
                     <button className="btn btn-outline btn-sm" style={{ color: 'var(--purple)' }} onClick={() => { setEditing(u); setModal('usage') }}>📊</button>
+                    {u.role !== 'Admin' && (
+                      <button className="btn btn-outline btn-sm" style={{ color: 'var(--blue)' }} onClick={() => handleImpersonate(u)}>👤 Act as</button>
+                    )}
+                    {confirmReset === u.id
+                      ? <><span style={{ fontSize: 11, color: 'var(--orange)', marginRight: 4 }}>Reset?</span>
+                          <button className="btn btn-danger btn-sm" onClick={() => handleResetUsage(u.id)}>Yes</button>
+                          <button className="btn btn-outline btn-sm" onClick={() => setConfirmReset(null)}>No</button></>
+                      : <button className="btn btn-outline btn-sm" style={{ color: 'var(--orange)' }} onClick={() => handleResetUsage(u.id)}>↺ Usage</button>
+                    }
                     <button className="btn btn-danger btn-sm" onClick={() => handleDelete(u.id)}>Del</button>
                   </div>
                 </td>

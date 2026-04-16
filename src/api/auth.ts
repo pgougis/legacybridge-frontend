@@ -1,6 +1,7 @@
 import { api } from './client'
 
 interface LoginResponse { token: string }
+interface ImpersonateResponse { token: string; targetEmail: string; targetRole: string }
 
 export async function login(email: string, password: string): Promise<string> {
   const res = await api.post<LoginResponse>('/auth/login', {
@@ -8,6 +9,10 @@ export async function login(email: string, password: string): Promise<string> {
     cUserPwd: password,
   })
   return res.token
+}
+
+export async function impersonate(userId: string): Promise<ImpersonateResponse> {
+  return api.post<ImpersonateResponse>(`/auth/impersonate/${userId}`, {})
 }
 
 /** Décode le payload JWT sans librairie externe. */
@@ -28,8 +33,9 @@ export function decodeToken(token: string): Record<string, string> {
 export function extractClaims(token: string) {
   const p = decodeToken(token)
   return {
-    userId:     p['nameid'] ?? p['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] ?? '',
-    customerId: p['customerId'] ?? '',
-    role:       (p['role'] ?? p['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ?? '') as string,
+    userId:         p['nameid'] ?? p['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] ?? '',
+    customerId:     p['customerId'] ?? '',
+    role:           (p['role'] ?? p['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ?? '') as string,
+    impersonatedBy: p['impersonatedBy'] ?? null,
   }
 }

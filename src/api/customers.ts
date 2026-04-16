@@ -9,4 +9,11 @@ export const customersApi = {
   update: (id: string, body: { name: string; email: string; [k: string]: unknown }) =>
     api.put<Customer>(`/customers/${id}`, { id, ...body }),
   delete: (id: string) => api.delete<null>(`/customers/${id}`),
+  register: (body: {
+    companyName: string; managerEmail: string;
+    managerFirstName: string; managerLastName: string;
+    managerPassword: string; planName: string;
+  }) => api.post<{ customerId: string; customerName: string; managerId: string; managerEmail: string; planId: string; planName: string }>(
+    '/customers/register', body
+  ),
 }

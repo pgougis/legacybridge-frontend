@@ -5,9 +5,13 @@ import type { Customer } from '../../api/types'
 export default function AdminCustomers() {
   const [rows, setRows]     = useState<Customer[]>([])
   const [search, setSearch] = useState('')
-  const [modal, setModal]   = useState<'create' | 'edit' | null>(null)
+  const [modal, setModal]   = useState<'register' | 'edit' | null>(null)
   const [editing, setEditing] = useState<Customer | null>(null)
-  const [form, setForm]     = useState({ name: '', email: '' })
+  const [editForm, setEditForm] = useState({ name: '', email: '' })
+  const [regForm, setRegForm] = useState({
+    companyName: '', managerEmail: '', managerFirstName: '',
+    managerLastName: '', managerPassword: '', planName: 'Default Plan',
+  })
   const [err, setErr]       = useState('')
 
   function load() {
@@ -20,28 +24,37 @@ export default function AdminCustomers() {
     r.email.toLowerCase().includes(search.toLowerCase())
   )
 
-  function openCreate() {
-    setForm({ name: '', email: '' })
+  function openRegister() {
+    setRegForm({ companyName: '', managerEmail: '', managerFirstName: '', managerLastName: '', managerPassword: '', planName: 'Default Plan' })
     setEditing(null)
     setErr('')
-    setModal('create')
+    setModal('register')
   }
 
   function openEdit(c: Customer) {
-    setForm({ name: c.name, email: c.email })
+    setEditForm({ name: c.name, email: c.email })
     setEditing(c)
     setErr('')
     setModal('edit')
   }
 
-  async function handleSave() {
+  async function handleRegister() {
     setErr('')
     try {
-      if (modal === 'create') {
-        await customersApi.create(form)
-      } else if (editing) {
-        await customersApi.update(editing.id, form)
-      }
+      await customersApi.register(regForm)
+      setModal(null)
+      load()
+    } catch (e: unknown) {
+      try { setErr(JSON.parse((e as Error).message)?.detail || 'Registration failed.') }
+      catch { setErr('Registration failed.') }
+    }
+  }
+
+  async function handleEdit() {
+    if (!editing) return
+    setErr('')
+    try {
+      await customersApi.update(editing.id, editForm)
       setModal(null)
       load()
     } catch {
@@ -61,7 +74,7 @@ export default function AdminCustomers() {
     <div className="page">
       <div className="page-hd">
         <div><h1>Customers</h1><p>Manage tenants</p></div>
-        <button className="btn btn-primary" onClick={openCreate}>+ New Customer</button>
+        <button className="btn btn-primary" onClick={openRegister}>+ Register Customer</button>
       </div>
 
       <div className="card">
@@ -100,27 +113,73 @@ export default function AdminCustomers() {
         </table>
       </div>
 
-      {modal && (
+      {/* Register Customer modal */}
+      {modal === 'register' && (
         <div className="modal-backdrop" onClick={() => setModal(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-head">
-              <h2>{modal === 'create' ? 'New Customer' : 'Edit Customer'}</h2>
+              <h2>Register Customer</h2>
+              <button className="modal-close" onClick={() => setModal(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              {err && <div className="err-toast">{err}</div>}
+              <div className="form-field">
+                <label>Company Name</label>
+                <input value={regForm.companyName} onChange={e => setRegForm(f => ({ ...f, companyName: e.target.value }))} />
+              </div>
+              <div className="form-row2">
+                <div className="form-field">
+                  <label>Manager First Name</label>
+                  <input value={regForm.managerFirstName} onChange={e => setRegForm(f => ({ ...f, managerFirstName: e.target.value }))} />
+                </div>
+                <div className="form-field">
+                  <label>Manager Last Name</label>
+                  <input value={regForm.managerLastName} onChange={e => setRegForm(f => ({ ...f, managerLastName: e.target.value }))} />
+                </div>
+              </div>
+              <div className="form-field">
+                <label>Manager Email</label>
+                <input type="email" value={regForm.managerEmail} onChange={e => setRegForm(f => ({ ...f, managerEmail: e.target.value }))} />
+              </div>
+              <div className="form-field">
+                <label>Manager Password</label>
+                <input type="password" value={regForm.managerPassword} onChange={e => setRegForm(f => ({ ...f, managerPassword: e.target.value }))} />
+              </div>
+              <div className="form-field">
+                <label>Default Plan Name</label>
+                <input value={regForm.planName} onChange={e => setRegForm(f => ({ ...f, planName: e.target.value }))} />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={() => setModal(null)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleRegister}>Register</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Customer modal */}
+      {modal === 'edit' && (
+        <div className="modal-backdrop" onClick={() => setModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
+              <h2>Edit Customer</h2>
               <button className="modal-close" onClick={() => setModal(null)}>×</button>
             </div>
             <div className="modal-body">
               {err && <div className="err-toast">{err}</div>}
               <div className="form-field">
                 <label>Name</label>
-                <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+                <input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} />
               </div>
               <div className="form-field">
                 <label>Email</label>
-                <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+                <input type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} />
               </div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-outline" onClick={() => setModal(null)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleSave}>Save</button>
+              <button className="btn btn-primary" onClick={handleEdit}>Save</button>
             </div>
           </div>
         </div>

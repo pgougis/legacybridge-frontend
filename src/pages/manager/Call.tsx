@@ -1,8 +1,45 @@
 import { useEffect, useState } from 'react'
 import { sourcesApi } from '../../api/sources'
+import { useAuth } from '../../ctx/auth'
 import type { LegacySource, WsdlOperation } from '../../api/types'
+import { API_BASE } from '../../config'
+
+function buildScript(email: string, sourceId: string, sourceName: string, method: string, body: string): string {
+  const safeBody = body.replace(/\\/g, '\\\\').replace(/'/g, "'\\''")
+  return `#!/usr/bin/env bash
+# LegacyBridge — generated call script
+# Source : ${sourceName}
+# Method : ${method}
+set -euo pipefail
+
+API="${API_BASE}"
+EMAIL="${email}"
+
+# ── 1. Authenticate (password is never stored in this script) ──────────────────
+read -r -s -p "Password for \${EMAIL}: " PASSWORD
+echo
+
+_resp=$(curl -sf -X POST "\${API}/auth/login" \\
+  -H 'Content-Type: application/json' \\
+  -d "{\\"cUserAccount\\":\\"\${EMAIL}\\",\\"cUserPwd\\":\\"\${PASSWORD}\\"}")
+
+TOKEN=$(printf '%s' "$_resp" | grep -o '"token":"[^"]*"' | sed 's/"token":"//;s/"//')
+unset PASSWORD _resp
+
+[ -n "$TOKEN" ] || { echo "Authentication failed." >&2; exit 1; }
+echo "Token obtained — calling API…"
+
+# ── 2. Call the legacy API ────────────────────────────────────────────────────
+curl -s -X POST "\${API}/legacy-sources/${sourceId}/${method}" \\
+  -H "Authorization: Bearer \${TOKEN}" \\
+  -H 'Content-Type: application/json' \\
+  -d '${safeBody}' \\
+  | (command -v jq >/dev/null 2>&1 && jq . || cat)
+`
+}
 
 export default function ManagerCall() {
+  const { user } = useAuth()
   const [sources, setSources]         = useState<LegacySource[]>([])
   const [sourceId, setSourceId]       = useState('')
   const [operations, setOperations]   = useState<WsdlOperation[]>([])
@@ -13,6 +50,8 @@ export default function ManagerCall() {
   const [response, setResponse]       = useState<string | null>(null)
   const [isError, setIsError]         = useState(false)
   const [loading, setLoading]         = useState(false)
+  const [scriptOpen, setScriptOpen]   = useState(false)
+  const [copied, setCopied]           = useState(false)
 
   useEffect(() => {
     sourcesApi.getAccessible().then(s => {
@@ -25,7 +64,7 @@ export default function ManagerCall() {
     if (!sourceId) return
     setOperations([]); setMethod(''); setFieldValues({}); setBody('{}')
     setOpLoading(true)
-    sourcesApi.getOperations(sourceId)
+    sourcesApi.getAllowedOperations(sourceId)
       .then(ops => {
         setOperations(ops)
         if (ops.length) applyOp(ops[0], {})
@@ -77,7 +116,18 @@ export default function ManagerCall() {
     }
   }
 
-  const selectedOp = operations.find(o => o.name === method) ?? null
+  const selectedOp   = operations.find(o => o.name === method) ?? null
+  const selectedSrc  = sources.find(s => s.id === sourceId)
+  const email        = user?.email ?? ''
+  const script       = (sourceId && method)
+    ? buildScript(email, sourceId, selectedSrc?.systemUrl ?? sourceId, method, body)
+    : ''
+
+  async function handleCopy() {
+    await navigator.clipboard.writeText(script)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <div className="page">
@@ -143,9 +193,20 @@ export default function ManagerCall() {
               style={{ fontFamily: 'monospace', fontSize: 12 }}
             />
           </div>
-          <button className="btn btn-blue" onClick={handleCall} disabled={loading || !sourceId || !method}>
-            {loading ? '⏳ Calling…' : '⚡ Send'}
-          </button>
+
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <button className="btn btn-blue" onClick={handleCall} disabled={loading || !sourceId || !method}>
+              {loading ? '⏳ Calling…' : '⚡ Send'}
+            </button>
+            <button
+              className="btn btn-outline"
+              onClick={() => setScriptOpen(true)}
+              disabled={!sourceId || !method}
+              title="Generate a bash script for this call"
+            >
+              {'</>'}  Bash Script
+            </button>
+          </div>
         </div>
       </div>
 
@@ -165,6 +226,31 @@ export default function ManagerCall() {
           </div>
         </div>
       </div>
+
+      {/* Script modal */}
+      {scriptOpen && (
+        <div className="modal-backdrop" onClick={() => setScriptOpen(false)}>
+          <div className="modal script-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
+              <div>
+                <h2>Bash Script</h2>
+                <p style={{ fontSize: 12, color: 'var(--text-sub)', marginTop: 2 }}>
+                  Password is prompted at runtime — never stored in the script.
+                </p>
+              </div>
+              <button className="modal-close" onClick={() => setScriptOpen(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <pre className="script-pre">{script}</pre>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+                <button className="btn btn-primary" onClick={handleCopy}>
+                  {copied ? '✓ Copied!' : 'Copy to clipboard'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

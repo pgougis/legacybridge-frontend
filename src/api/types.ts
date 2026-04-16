@@ -18,6 +18,7 @@ export interface UserDto {
   createdAt: string
   apiCallCount: number
   apiCallDailyLimit: number | null
+  ownerManagerId: string | null
 }
 
 export type LegacySystemType = 'OpenEdgeSoap' | 'GenericSoap' | 'AsmxDotNet' | 'OracleSoap'
@@ -40,6 +41,8 @@ export interface LegacySource {
   systemUrl: string
   swaggerUrl?: string
   customerId: string
+  ownerManagerId?: string
+  ownerManagerEmail?: string
   createdAt: string
   updatedAt?: string
   authConfig?: LegacyAuthConfig

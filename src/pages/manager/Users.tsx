@@ -4,7 +4,7 @@ import { useAuth } from '../../ctx/auth'
 import type { UserDto, UserRole } from '../../api/types'
 import Usage from '../shared/Usage'
 
-const ROLES: UserRole[] = ['Manager', 'Member', 'Viewer']
+const ROLES: UserRole[] = ['Member']
 
 const roleClass: Record<string, string> = {
   Admin: 'purple', Manager: 'blue', Member: 'green', Viewer: 'gray',
@@ -52,7 +52,10 @@ export default function ManagerUsers() {
         })
       }
       setModal(null); load()
-    } catch { setErr('Save failed.') }
+    } catch (e: unknown) {
+      try { setErr(JSON.parse((e as Error).message)?.detail || 'Save failed.') }
+      catch { setErr('Save failed.') }
+    }
   }
 
   async function handlePwd() {

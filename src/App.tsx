@@ -25,6 +25,13 @@ function UsageSelf() {
   return <Usage userId={user.userId} />
 }
 
+// Wrapper for Admin/Manager: adds user selector
+function UsageSelectable() {
+  const { user } = useAuth()
+  if (!user) return null
+  return <Usage userId={user.userId} selectable />
+}
+
 function RequireAuth({ roles, children }: { roles: string[]; children: React.ReactNode }) {
   const { user } = useAuth()
   if (!user) return <Navigate to="/login" replace />
@@ -46,7 +53,7 @@ export default function App() {
         <Route path="users"      element={<AdminUsers />} />
         <Route path="sources"    element={<AdminSources />} />
         <Route path="plans"      element={<AdminPlans />} />
-        <Route path="usage"      element={<UsageSelf />} />
+        <Route path="usage"      element={<UsageSelectable />} />
         <Route index element={<Navigate to="dashboard" replace />} />
       </Route>
 
@@ -57,7 +64,7 @@ export default function App() {
         <Route path="sources"    element={<ManagerSources />} />
         <Route path="plans"      element={<ManagerPlans />} />
         <Route path="call"       element={<ManagerCall />} />
-        <Route path="usage"      element={<UsageSelf />} />
+        <Route path="usage"      element={<UsageSelectable />} />
         <Route index element={<Navigate to="dashboard" replace />} />
       </Route>
 
