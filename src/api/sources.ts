@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { LegacySource, WsdlOperation } from './types'
+import type { LegacySource, SimulatorResponseDto, WsdlOperation } from './types'
 
 export interface SourceAssignedUser {
   userId: string; email: string; firstName: string; lastName: string
@@ -22,6 +22,16 @@ export const sourcesApi = {
   delete: (id: string) => api.delete<null>(`/legacy-sources/${id}`),
   call: (sourceId: string, method: string, body: unknown) =>
     api.post<unknown>(`/legacy-sources/${sourceId}/${method}`, body),
+
+  // Simulator
+  toggleSimulation: (id: string, isSimulated: boolean) =>
+    api.patch<{ isSimulated: boolean }>(`/legacy-sources/${id}/simulate`, { isSimulated }),
+  getSimulatorResponses: (id: string) =>
+    api.get<SimulatorResponseDto[]>(`/legacy-sources/${id}/simulator-responses`),
+  upsertSimulatorResponse: (id: string, method: string, body: Omit<SimulatorResponseDto, 'id' | 'sourceId' | 'method' | 'createdAt' | 'updatedAt'>) =>
+    api.put<SimulatorResponseDto>(`/legacy-sources/${id}/simulator-responses/${method}`, { sourceId: id, method, ...body }),
+  deleteSimulatorResponse: (id: string, method: string) =>
+    api.delete<null>(`/legacy-sources/${id}/simulator-responses/${method}`),
 }
 
 export const systemTypeLabels: Record<number, string> = {

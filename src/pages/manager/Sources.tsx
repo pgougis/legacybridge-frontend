@@ -3,12 +3,13 @@ import { sourcesApi, systemTypeLabels } from '../../api/sources'
 import type { SourceAssignedUser } from '../../api/sources'
 import { useAuth } from '../../ctx/auth'
 import type { LegacySource } from '../../api/types'
+import SimulatorModal from '../shared/SimulatorModal'
 
 export default function ManagerSources() {
   const { user } = useAuth()
   const [rows, setRows]         = useState<LegacySource[]>([])
   const [search, setSearch]     = useState('')
-  const [modal, setModal]       = useState<'create' | 'edit' | 'auth' | 'users' | null>(null)
+  const [modal, setModal]       = useState<'create' | 'edit' | 'auth' | 'users' | 'simulator' | null>(null)
   const [assignedUsers, setAssignedUsers] = useState<SourceAssignedUser[]>([])
   const [editing, setEditing]   = useState<LegacySource | null>(null)
   const [form, setForm]         = useState({ systemType: 1, systemUrl: '' })
@@ -56,6 +57,11 @@ export default function ManagerSources() {
     try { await sourcesApi.delete(id); load() } catch { alert('Delete failed.') }
   }
 
+  async function handleToggleSimulation(s: LegacySource) {
+    try { await sourcesApi.toggleSimulation(s.id, !s.isSimulated); load() }
+    catch { alert('Toggle simulation failed.') }
+  }
+
   async function openUsers(s: LegacySource) {
     setEditing(s)
     const users = await sourcesApi.getAssignedUsers(s.id).catch(() => [])
@@ -98,6 +104,12 @@ export default function ManagerSources() {
                     <button className="btn btn-outline btn-sm" onClick={() => openUsers(s)}>👤 Users</button>
                     <button className="btn btn-outline btn-sm" onClick={() => openSwagger(s.id)}>Swagger</button>
                     <button className="btn btn-outline btn-sm" onClick={() => openEdit(s)}>Edit</button>
+                    <button className="btn btn-outline btn-sm" style={{ color: 'var(--orange)' }} onClick={() => { setEditing(s); setModal('simulator') }}>🧪</button>
+                    <button
+                      className="btn btn-outline btn-sm"
+                      style={{ color: s.isSimulated ? 'var(--green)' : 'var(--text-sub)' }}
+                      onClick={() => handleToggleSimulation(s)}
+                    >{s.isSimulated ? 'Live ↩' : 'Simulate'}</button>
                     <button className="btn btn-outline btn-sm" style={{ color: 'var(--blue)' }} onClick={() => openAuth(s)}>Auth</button>
                     <button className="btn btn-danger btn-sm" onClick={() => handleDelete(s.id)}>Del</button>
                   </div>
@@ -137,6 +149,14 @@ export default function ManagerSources() {
             </div>
           </div>
         </div>
+      )}
+
+      {modal === 'simulator' && editing && (
+        <SimulatorModal
+          sourceId={editing.id}
+          sourceUrl={editing.systemUrl}
+          onClose={() => { setModal(null); setEditing(null) }}
+        />
       )}
 
       {modal === 'users' && editing && (

@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import { sourcesApi, systemTypeLabels } from '../../api/sources'
 import { customersApi } from '../../api/customers'
 import type { LegacySource, Customer } from '../../api/types'
+import SimulatorModal from '../shared/SimulatorModal'
 
 export default function AdminSources() {
   const [rows, setRows]           = useState<LegacySource[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [search, setSearch]       = useState('')
-  const [modal, setModal]         = useState<'create' | 'edit' | 'auth' | null>(null)
+  const [modal, setModal]         = useState<'create' | 'edit' | 'auth' | 'simulator' | null>(null)
   const [editing, setEditing]     = useState<LegacySource | null>(null)
   const [form, setForm]           = useState({ systemType: 1, systemUrl: '', customerId: '' })
   const [authForm, setAuthForm]   = useState({ authType: 'Basic', username: '', password: '' })
@@ -59,6 +60,13 @@ export default function AdminSources() {
     } catch { setErr('Auth save failed.') }
   }
 
+  async function handleToggleSimulation(s: LegacySource) {
+    try {
+      await sourcesApi.toggleSimulation(s.id, !s.isSimulated)
+      load()
+    } catch { alert('Toggle simulation failed.') }
+  }
+
   async function handleDelete(id: string) {
     if (!confirm('Delete this source?')) return
     try { await sourcesApi.delete(id); load() } catch { alert('Delete failed.') }
@@ -87,7 +95,7 @@ export default function AdminSources() {
         </div>
         <table>
           <thead>
-            <tr><th>URL</th><th>Type</th><th>Customer</th><th>Manager</th><th>Auth</th><th>Created</th><th></th></tr>
+            <tr><th>URL</th><th>Type</th><th>Customer</th><th>Manager</th><th>Auth</th><th>Mode</th><th>Created</th><th></th></tr>
           </thead>
           <tbody>
             {filtered.map(s => (
@@ -97,11 +105,23 @@ export default function AdminSources() {
                 <td className="sub">{custName(s.customerId)}</td>
                 <td className="sub">{s.ownerManagerEmail ?? <span className="pill gray">—</span>}</td>
                 <td>{s.authConfig ? <span className="pill green">Configured</span> : <span className="pill gray">None</span>}</td>
+                <td>
+                  {s.isSimulated
+                    ? <span className="pill orange">🧪 Simulated</span>
+                    : <span className="pill gray">Live</span>}
+                </td>
                 <td className="sub">{new Date(s.createdAt).toLocaleDateString()}</td>
                 <td>
                   <div className="actions">
                     <button className="btn btn-outline btn-sm" onClick={() => openSwagger(s.id)}>Swagger</button>
                     <button className="btn btn-outline btn-sm" onClick={() => openEdit(s)}>Edit</button>
+                    <button className="btn btn-outline btn-sm" style={{ color: 'var(--orange)' }} onClick={() => { setEditing(s); setModal('simulator') }}>🧪</button>
+                    <button
+                      className="btn btn-outline btn-sm"
+                      style={{ color: s.isSimulated ? 'var(--green)' : 'var(--text-sub)' }}
+                      onClick={() => handleToggleSimulation(s)}
+                      title={s.isSimulated ? 'Désactiver simulation' : 'Activer simulation'}
+                    >{s.isSimulated ? 'Live ↩' : 'Simulate'}</button>
                     <button className="btn btn-blue btn-sm" style={{ background: 'var(--blue-lt)', color: 'var(--blue)' }} onClick={() => openAuth(s)}>Auth</button>
                     <button className="btn btn-danger btn-sm" onClick={() => handleDelete(s.id)}>Del</button>
                   </div>
@@ -109,7 +129,7 @@ export default function AdminSources() {
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={7}><div className="empty"><div className="icon">🔌</div>No sources found</div></td></tr>
+              <tr><td colSpan={8}><div className="empty"><div className="icon">🔌</div>No sources found</div></td></tr>
             )}
           </tbody>
         </table>
@@ -151,6 +171,14 @@ export default function AdminSources() {
             </div>
           </div>
         </div>
+      )}
+
+      {modal === 'simulator' && editing && (
+        <SimulatorModal
+          sourceId={editing.id}
+          sourceUrl={editing.systemUrl}
+          onClose={() => { setModal(null); setEditing(null) }}
+        />
       )}
 
       {modal === 'auth' && (

@@ -46,6 +46,20 @@ export interface LegacySource {
   createdAt: string
   updatedAt?: string
   authConfig?: LegacyAuthConfig
+  isSimulated: boolean
+}
+
+export interface SimulatorResponseDto {
+  id: string
+  sourceId: string
+  method: string
+  responseJson: string
+  delayMs: number
+  isError: boolean
+  errorStatusCode: number
+  errorMessage?: string
+  createdAt: string
+  updatedAt?: string
 }
 
 export interface AccessRule {
