@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+// @ts-ignore
 import SwaggerUI from 'swagger-ui-react'
 import 'swagger-ui-react/swagger-ui.css'
 
@@ -25,7 +26,7 @@ export default function SwaggerViewer() {
   return (
     <SwaggerUI
       spec={spec}
-      requestInterceptor={(req) => {
+      requestInterceptor={(req: any) => {
         if (token) req.headers['Authorization'] = `Bearer ${token}`
         return req
       }}

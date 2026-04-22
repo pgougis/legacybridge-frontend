@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { useAuth, homeFor } from '../ctx/auth'
+import { useAuth } from '../ctx/auth'
 import { usersApi } from '../api/users'
 import { customersApi } from '../api/customers'
 import { logsApi } from '../api/logs'

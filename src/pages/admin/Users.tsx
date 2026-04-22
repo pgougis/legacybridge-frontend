@@ -38,10 +38,6 @@ export default function AdminUsers() {
     `${r.firstName} ${r.lastName} ${r.email}`.toLowerCase().includes(search.toLowerCase())
   )
 
-  function openCreate() {
-    setForm({ email: '', password: '', firstName: '', lastName: '', role: 'Member', customerId: customers[0]?.id ?? '', dailyLimit: '' })
-    setEditing(null); setErr(''); setModal('create')
-  }
   function openEdit(u: UserDto) {
     setForm({
       email: u.email, password: '', firstName: u.firstName, lastName: u.lastName,

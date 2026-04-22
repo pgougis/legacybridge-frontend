@@ -3,7 +3,7 @@ import { logsApi, type ApiCallLogDto } from '../../api/logs'
 import { usersApi } from '../../api/users'
 import { useAuth } from '../../ctx/auth'
 import type { UserDto } from '../../api/types'
-import { LOGS_LOGS_PAGE_SIZE } from '../../config'
+import { LOGS_PAGE_SIZE } from '../../config'
 
 interface Props {
   /** When true, show user-selector (Admin / Manager) */
