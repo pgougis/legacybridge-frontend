@@ -57,7 +57,7 @@ const avatarColor: Record<string, string> = {
 
 
 export default function Shell() {
-  const { user, logout, isImpersonating, impersonatedEmail, exitImpersonation } = useAuth()
+  const { user, token, logout, isImpersonating, impersonatedEmail, exitImpersonation } = useAuth()
   const navigate = useNavigate()
   const [apiCallCount, setApiCallCount]       = useState<number | null>(null)
   const [apiCallDailyLimit, setApiCallDailyLimit] = useState<number | null>(null)
@@ -83,7 +83,11 @@ export default function Shell() {
     function ping() {
       const last = Number(localStorage.getItem(KEY) ?? 0)
       if (Date.now() - last < ONE_DAY) return
-      fetch(`${PROD_URL}/_health`).catch(() => {})
+      const t = localStorage.getItem('lb_token')
+      fetch(`${PROD_URL}/api-logs/keepalive`, {
+        method: 'POST',
+        headers: t ? { Authorization: `Bearer ${t}` } : {},
+      }).catch(() => {})
       localStorage.setItem(KEY, String(Date.now()))
     }
 
