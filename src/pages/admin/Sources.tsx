@@ -177,6 +177,7 @@ export default function AdminSources() {
         <SimulatorModal
           sourceId={editing.id}
           sourceUrl={editing.systemUrl}
+          systemType={editing.systemType}
           onClose={() => { setModal(null); setEditing(null) }}
         />
       )}
