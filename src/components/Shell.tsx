@@ -9,21 +9,23 @@ import { INACTIVITY_MS } from '../config'
 interface NavItem { to: string; icon: string; label: string; color?: string; href?: string; onClick?: () => void }
 
 const adminNav = (): NavItem[] => [
-  { to: '/admin/dashboard', icon: '◉', label: 'Dashboard' },
-  { to: '/admin/customers', icon: '🏢', label: 'Customers' },
-  { to: '/admin/users',     icon: '👤', label: 'Users' },
-  { to: '/admin/sources',   icon: '🔌', label: 'Legacy Sources' },
-  { to: '/admin/plans',     icon: '📋', label: 'Access Plans' },
-  { to: '/admin/usage',     icon: '📊', label: 'Usage' },
+  { to: '/admin/dashboard',  icon: '◉',  label: 'Dashboard' },
+  { to: '/admin/customers',  icon: '🏢', label: 'Customers' },
+  { to: '/admin/users',      icon: '👤', label: 'Users' },
+  { to: '/admin/sources',    icon: '🔌', label: 'Legacy Sources' },
+  { to: '/admin/plans',      icon: '📋', label: 'Access Plans' },
+  { to: '/admin/testbench',  icon: '⚗',  label: 'Test Bench', color: 'orange' },
+  { to: '/admin/usage',      icon: '📊', label: 'Usage' },
   { to: '', icon: '⚠', label: 'API Error Logs', onClick: () => logsApi.downloadTxt(undefined, 'All users') },
   { to: '', href: '/swagger', icon: '📖', label: 'Swagger API' },
 ]
 
 const managerNav = (): NavItem[] => [
-  { to: '/manager/dashboard', icon: '◉', label: 'Dashboard' },
+  { to: '/manager/dashboard', icon: '◉',  label: 'Dashboard' },
   { to: '/manager/users',     icon: '👤', label: 'Users' },
   { to: '/manager/sources',   icon: '🔌', label: 'Legacy Sources' },
   { to: '/manager/plans',     icon: '📋', label: 'Access Plans' },
+  { to: '/manager/testbench', icon: '⚗',  label: 'Test Bench', color: 'orange' },
   { to: '/manager/call',      icon: '⚡', label: 'Call Legacy', color: 'blue' },
   { to: '/manager/usage',     icon: '📊', label: 'My Usage' },
   { to: '', icon: '⚠', label: 'API Error Logs', onClick: () => logsApi.downloadTxt(undefined, 'All customer users') },

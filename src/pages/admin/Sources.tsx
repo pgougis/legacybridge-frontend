@@ -2,13 +2,11 @@ import { useEffect, useState } from 'react'
 import { sourcesApi, systemTypeLabels } from '../../api/sources'
 import { customersApi } from '../../api/customers'
 import type { LegacySource, Customer } from '../../api/types'
-import SimulatorModal from '../shared/SimulatorModal'
-
 export default function AdminSources() {
   const [rows, setRows]           = useState<LegacySource[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [search, setSearch]       = useState('')
-  const [modal, setModal]         = useState<'create' | 'edit' | 'auth' | 'simulator' | null>(null)
+  const [modal, setModal]         = useState<'create' | 'edit' | 'auth' | null>(null)
   const [editing, setEditing]     = useState<LegacySource | null>(null)
   const [form, setForm]           = useState({ systemType: 1, systemUrl: '', customerId: '' })
   const [authForm, setAuthForm]   = useState({ authType: 'Basic', username: '', password: '' })
@@ -115,7 +113,6 @@ export default function AdminSources() {
                   <div className="actions">
                     <button className="btn btn-outline btn-sm" onClick={() => openSwagger(s.id)}>Swagger</button>
                     <button className="btn btn-outline btn-sm" onClick={() => openEdit(s)}>Edit</button>
-                    <button className="btn btn-outline btn-sm" style={{ color: 'var(--orange)' }} onClick={() => { setEditing(s); setModal('simulator') }}>🧪</button>
                     <button
                       className="btn btn-outline btn-sm"
                       style={{ color: s.isSimulated ? 'var(--green)' : 'var(--text-sub)' }}
@@ -171,15 +168,6 @@ export default function AdminSources() {
             </div>
           </div>
         </div>
-      )}
-
-      {modal === 'simulator' && editing && (
-        <SimulatorModal
-          sourceId={editing.id}
-          sourceUrl={editing.systemUrl}
-          systemType={editing.systemType}
-          onClose={() => { setModal(null); setEditing(null) }}
-        />
       )}
 
       {modal === 'auth' && (
