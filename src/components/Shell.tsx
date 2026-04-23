@@ -73,6 +73,25 @@ export default function Shell() {
       .catch(() => {})
   }, [user])
 
+  // Keep Render backend alive — ping prod once per day while tab is open
+  useEffect(() => {
+    const PROD_URL = (import.meta.env.VITE_API_URL as string | undefined)
+      || 'https://legacybridge-backend-jtgq.onrender.com'
+    const KEY      = 'lb_last_ping'
+    const ONE_DAY  = 24 * 60 * 60 * 1000
+
+    function ping() {
+      const last = Number(localStorage.getItem(KEY) ?? 0)
+      if (Date.now() - last < ONE_DAY) return
+      fetch(`${PROD_URL}/_health`).catch(() => {})
+      localStorage.setItem(KEY, String(Date.now()))
+    }
+
+    ping()
+    const timer = setInterval(ping, 60 * 60 * 1000) // re-check every hour
+    return () => clearInterval(timer)
+  }, [])
+
   // Auto-logout after 1 hour of inactivity
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>
