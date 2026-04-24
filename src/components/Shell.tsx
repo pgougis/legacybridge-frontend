@@ -56,7 +56,7 @@ const avatarColor: Record<string, string> = {
 
 
 export default function Shell() {
-  const { user, token, logout, isImpersonating, impersonatedEmail, exitImpersonation } = useAuth()
+  const { user, logout, isImpersonating, impersonatedEmail, exitImpersonation } = useAuth()
   const navigate = useNavigate()
   const [apiCallCount, setApiCallCount]       = useState<number | null>(null)
   const [apiCallDailyLimit, setApiCallDailyLimit] = useState<number | null>(null)
