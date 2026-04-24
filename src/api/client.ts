@@ -47,8 +47,8 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
     if (body.includes('EMAIL_NOT_CONFIRMED')) throw new Error('EMAIL_NOT_CONFIRMED')
 
-    // Don't try to refresh on login/refresh/logout paths
-    if (path.startsWith('/auth/')) {
+    // Don't try to refresh on login/refresh — would cause an infinite loop
+    if (path === '/auth/login' || path === '/auth/refresh') {
       localStorage.removeItem('lb_token')
       localStorage.removeItem('lb_refresh_token')
       window.location.href = '/login'
