@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './ctx/auth'
-import Login from './pages/Login'
+import Login           from './pages/Login'
+import ForgotPassword  from './pages/ForgotPassword'
+import ResetPassword   from './pages/ResetPassword'
 import AdminDashboard   from './pages/admin/Dashboard'
 import AdminCustomers   from './pages/admin/Customers'
 import AdminUsers       from './pages/admin/Users'
@@ -46,7 +48,9 @@ export default function App() {
 
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to={home(user.role)} replace /> : <Login />} />
+      <Route path="/login"           element={user ? <Navigate to={home(user.role)} replace /> : <Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password"  element={<ResetPassword />} />
 
       {/* Admin */}
       <Route path="/admin" element={<RequireAuth roles={['Admin']}><Shell /></RequireAuth>}>

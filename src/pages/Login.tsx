@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth, homeFor } from '../ctx/auth'
 import { extractClaims } from '../api/auth'
 
@@ -74,6 +74,11 @@ export default function Login() {
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+        <div style={{ textAlign: 'center', marginTop: 14 }}>
+          <Link to="/forgot-password" style={{ color: 'var(--text-3)', fontSize: 13 }}>
+            Mot de passe oublié ?
+          </Link>
+        </div>
       </div>
     </div>
   )
