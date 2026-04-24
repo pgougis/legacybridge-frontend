@@ -18,6 +18,7 @@ import Viewer           from './pages/Viewer'
 import Shell            from './components/Shell'
 import Usage            from './pages/shared/Usage'
 import TestBench        from './pages/shared/TestBench'
+import Logs             from './pages/shared/Logs'
 
 // Wrapper: passes the current user's own ID to the Usage component
 function UsageSelf() {
@@ -55,6 +56,7 @@ export default function App() {
         <Route path="sources"    element={<AdminSources />} />
         <Route path="plans"      element={<AdminPlans />} />
         <Route path="testbench"  element={<TestBench />} />
+        <Route path="logs"       element={<Logs selectable />} />
         <Route path="usage"      element={<UsageSelectable />} />
         <Route index element={<Navigate to="dashboard" replace />} />
       </Route>
@@ -66,6 +68,7 @@ export default function App() {
         <Route path="sources"    element={<ManagerSources />} />
         <Route path="plans"      element={<ManagerPlans />} />
         <Route path="testbench"  element={<TestBench />} />
+        <Route path="logs"       element={<Logs selectable />} />
         <Route path="call"       element={<ManagerCall />} />
         <Route path="usage"      element={<UsageSelectable />} />
         <Route index element={<Navigate to="dashboard" replace />} />

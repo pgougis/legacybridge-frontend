@@ -3,7 +3,6 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../ctx/auth'
 import { usersApi } from '../api/users'
 import { customersApi } from '../api/customers'
-import { logsApi } from '../api/logs'
 import { INACTIVITY_MS } from '../config'
 
 interface NavItem { to: string; icon: string; label: string; color?: string; href?: string; onClick?: () => void }
@@ -16,7 +15,7 @@ const adminNav = (): NavItem[] => [
   { to: '/admin/plans',      icon: '📋', label: 'Access Plans' },
   { to: '/admin/testbench',  icon: '⚗',  label: 'Test Bench', color: 'orange' },
   { to: '/admin/usage',      icon: '📊', label: 'Usage' },
-  { to: '', icon: '⚠', label: 'API Error Logs', onClick: () => logsApi.downloadTxt(undefined, 'All users') },
+  { to: '/admin/logs', icon: '⚠', label: 'API Error Logs' },
   { to: '', href: '/swagger', icon: '📖', label: 'Swagger API' },
 ]
 
@@ -28,7 +27,7 @@ const managerNav = (): NavItem[] => [
   { to: '/manager/testbench', icon: '⚗',  label: 'Test Bench', color: 'orange' },
   { to: '/manager/call',      icon: '⚡', label: 'Call Legacy', color: 'blue' },
   { to: '/manager/usage',     icon: '📊', label: 'My Usage' },
-  { to: '', icon: '⚠', label: 'API Error Logs', onClick: () => logsApi.downloadTxt(undefined, 'All customer users') },
+  { to: '/manager/logs', icon: '⚠', label: 'API Error Logs' },
 ]
 
 const memberNav: NavItem[] = [

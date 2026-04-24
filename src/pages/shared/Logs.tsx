@@ -148,6 +148,12 @@ export default function Logs({ selectable = false }: Props) {
           <h1>API Error Logs</h1>
           <p>Failed API calls — 4xx and 5xx responses</p>
         </div>
+        <button
+          className="btn btn-outline"
+          onClick={() => logsApi.downloadTxt(selectedId || undefined)}
+        >
+          Download .txt
+        </button>
       </div>
       <div className="card">
         <div className="card-body">{content}</div>
