@@ -86,7 +86,7 @@ export default function AdminSources() {
         </div>
         <table>
           <thead>
-            <tr><th>URL</th><th>Type</th><th>Customer</th><th>Manager</th><th>Auth</th><th>Mode</th><th>Created</th><th></th></tr>
+            <tr><th>URL</th><th>Type</th><th>Customer</th><th>Manager</th><th>Auth</th><th>Created</th><th></th></tr>
           </thead>
           <tbody>
             {filtered.map(s => (
@@ -96,11 +96,6 @@ export default function AdminSources() {
                 <td className="sub">{custName(s.customerId)}</td>
                 <td className="sub">{s.ownerManagerEmail ?? <span className="pill gray">—</span>}</td>
                 <td>{s.authConfig ? <span className="pill green">Configured</span> : <span className="pill gray">None</span>}</td>
-                <td>
-                  {s.isSimulated
-                    ? <span className="pill orange">🧪 Simulated</span>
-                    : <span className="pill gray">Live</span>}
-                </td>
                 <td className="sub">{new Date(s.createdAt).toLocaleDateString()}</td>
                 <td>
                   <div className="actions">
@@ -113,7 +108,7 @@ export default function AdminSources() {
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={8}><div className="empty"><div className="icon">🔌</div>No sources found</div></td></tr>
+              <tr><td colSpan={7}><div className="empty"><div className="icon">🔌</div>No sources found</div></td></tr>
             )}
           </tbody>
         </table>

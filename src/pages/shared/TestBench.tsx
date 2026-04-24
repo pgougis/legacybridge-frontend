@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { sourcesApi, systemTypeLabels } from '../../api/sources'
-import type { LegacySource, LegacySystemType, SimulatorResponseDto } from '../../api/types'
+import type { LegacySource, LegacySystemType } from '../../api/types'
 
 // ─── Request format builders per system type ──────────────────────────────────
 
@@ -127,6 +127,34 @@ function buildFaultReq(code: string, msg: string, detail: string, systemType: Le
     case 'GenericSoap':  return genericFault(code, msg)
     case 'AsmxDotNet':   return asmxError(code, msg)
     case 'OracleSoap':   return oracleFault(code, msg)
+  }
+}
+
+// ─── Response format builders per system type ────────────────────────────────
+
+function buildNominalResponse(method: string, systemType: LegacySystemType): string {
+  switch (systemType) {
+    case 'OpenEdgeSoap':
+      return prettyJson(JSON.stringify({ 'P-RETOUR': 'OK', 'P-METHOD': method, 'P-DATA': [] }))
+    case 'GenericSoap':
+      return prettyJson(JSON.stringify({ status: 'SUCCESS', code: 0, data: {} }))
+    case 'AsmxDotNet':
+      return prettyJson(JSON.stringify({ [`${method}Result`]: { Success: true, Data: null } }))
+    case 'OracleSoap':
+      return prettyJson(JSON.stringify({ return: { status: 'S', statusCode: '0', message: 'OK' } }))
+  }
+}
+
+function buildFaultResponse(code: string, msg: string, _detail: string, systemType: LegacySystemType): string {
+  switch (systemType) {
+    case 'OpenEdgeSoap':
+      return prettyJson(JSON.stringify({ 'P-RETOUR': 'KO', 'P-ERROR-CODE': code, 'P-MESSAGE': msg }))
+    case 'GenericSoap':
+      return prettyJson(JSON.stringify({ status: 'ERROR', code, message: msg }))
+    case 'AsmxDotNet':
+      return prettyJson(JSON.stringify({ error: code, message: msg }))
+    case 'OracleSoap':
+      return prettyJson(JSON.stringify({ return: { status: 'E', statusCode: code, message: msg } }))
   }
 }
 
@@ -257,7 +285,6 @@ export default function TestBench() {
   const [sourceId,     setSourceId]     = useState<string>('')
   const [systemType,   setSystemType]   = useState<LegacySystemType>('OpenEdgeSoap')
   const [typeOverride, setTypeOverride] = useState(false)
-  const [responses,    setResponses]    = useState<SimulatorResponseDto[]>([])
   const [entityKey,    setEntityKey]    = useState('Client')
   const [methodIdx,    setMethodIdx]    = useState(0)
   const [isFault,      setIsFault]      = useState(false)
@@ -271,11 +298,6 @@ export default function TestBench() {
       }
     }).catch(() => {})
   }, [])
-
-  useEffect(() => {
-    if (!sourceId) { setResponses([]); return }
-    sourcesApi.getSimulatorResponses(sourceId).then(setResponses).catch(() => setResponses([]))
-  }, [sourceId])
 
   function selectSource(id: string) {
     setSourceId(id)
@@ -302,9 +324,6 @@ export default function TestBench() {
 
   const isOpenEdge    = systemType === 'OpenEdgeSoap'
   const faultLabel    = method.faultLabel ?? (isOpenEdge ? 'SOAP Fault' : 'Error')
-  const templateName  = isFault ? method.fault : method.nominal
-  const template      = responses.find(r => r.method === templateName) ?? null
-  const hasSource     = Boolean(sourceId)
 
   // Left panel (request)
   let leftContent: string
@@ -319,15 +338,10 @@ export default function TestBench() {
     leftContent = buildNominalReq(method.nominal, method.xmlFields, systemType)
   }
 
-  // Right panel (response)
-  let rightContent: string
-  if (!hasSource) {
-    rightContent = `// Select a source above to load templates`
-  } else if (template) {
-    rightContent = prettyJson(template.responseJson)
-  } else {
-    rightContent = `// Template "${templateName}" not configured\n// Add it in Legacy Sources to see the response.`
-  }
+  // Right panel (response) — illustrative static format
+  const rightContent = isFault
+    ? buildFaultResponse(method.faultCode, method.faultMsg, method.faultDetail, systemType)
+    : buildNominalResponse(method.nominal, systemType)
 
   const faultColor  = 'var(--red, #c0392b)'
   const okColor     = 'var(--green, #27ae60)'
@@ -370,7 +384,6 @@ export default function TestBench() {
                   {systemTypeLabels[s.systemType as unknown as number] ?? s.systemType}
                   {' · '}
                   {s.systemUrl.replace(/^https?:\/\//, '').slice(0, 48)}
-                  {s.isSimulated ? ' 🧪' : ''}
                 </option>
               ))}
             </select>
@@ -396,13 +409,6 @@ export default function TestBench() {
             )}
           </div>
 
-          {/* Simulated badge */}
-          {selectedSource?.isSimulated && (
-            <span className="pill orange" style={{ fontSize: 11 }}>🧪 Simulated mode</span>
-          )}
-          {selectedSource && !selectedSource.isSimulated && (
-            <span className="pill gray" style={{ fontSize: 11 }}>Live mode — templates not served</span>
-          )}
         </div>
       </div>
 
@@ -454,13 +460,8 @@ export default function TestBench() {
             </span>
           </label>
 
-          {/* Template badge */}
-          <span style={{ marginLeft: 'auto', fontSize: 11, color: template ? okColor : 'var(--text-sub)' }}>
-            {!hasSource
-              ? '○ no source selected'
-              : template
-                ? `✓ ${templateName}${template.delayMs > 0 ? ` · ${template.delayMs}ms` : ''}`
-                : `○ no template "${templateName}"`}
+          <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-sub)' }}>
+            {isFault ? faultLabel : method.nominal}
           </span>
         </div>
 
@@ -505,13 +506,10 @@ export default function TestBench() {
               style={{
                 width: '100%', height: 380, resize: 'vertical',
                 fontFamily: 'monospace', fontSize: 11,
-                background: template
-                  ? (isFault ? 'var(--bg-error, #fff8f8)' : 'var(--bg-code, #f8f9fb)')
-                  : 'var(--bg-muted, #f4f4f5)',
+                background: isFault ? 'var(--bg-error, #fff8f8)' : 'var(--bg-code, #f8f9fb)',
                 border: '1px solid ' + (isFault ? faultColor : 'var(--border)'),
                 borderRadius: 4, padding: 8, lineHeight: 1.5,
-                color: template ? 'var(--text)' : 'var(--text-sub)',
-                boxSizing: 'border-box',
+                color: 'var(--text)', boxSizing: 'border-box',
               }}
             />
           </div>
@@ -522,7 +520,7 @@ export default function TestBench() {
           padding: '8px 20px', borderTop: '1px solid var(--border)',
           fontSize: 11, color: 'var(--text-sub)', display: 'flex', justifyContent: 'space-between',
         }}>
-          <span>Request format is illustrative · JSON response is served by the simulator when Simulated mode is active</span>
+          <span>Request and response formats are illustrative</span>
           <span style={{ color: 'var(--text-sub)' }}>
             {systemType === 'AsmxDotNet' ? 'ASMX .NET · REST/JSON' : `${SYSTEM_TYPES.find(t => t.value === systemType)?.label} · SOAP`}
           </span>
