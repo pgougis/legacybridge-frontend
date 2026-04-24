@@ -55,11 +55,6 @@ export default function ManagerSources() {
     try { await sourcesApi.delete(id); load() } catch { alert('Delete failed.') }
   }
 
-  async function handleToggleSimulation(s: LegacySource) {
-    try { await sourcesApi.toggleSimulation(s.id, !s.isSimulated); load() }
-    catch { alert('Toggle simulation failed.') }
-  }
-
   async function openUsers(s: LegacySource) {
     setEditing(s)
     const users = await sourcesApi.getAssignedUsers(s.id).catch(() => [])
@@ -102,11 +97,6 @@ export default function ManagerSources() {
                     <button className="btn btn-outline btn-sm" onClick={() => openUsers(s)}>👤 Users</button>
                     <button className="btn btn-outline btn-sm" onClick={() => openSwagger(s.id)}>Swagger</button>
                     <button className="btn btn-outline btn-sm" onClick={() => openEdit(s)}>Edit</button>
-                    <button
-                      className="btn btn-outline btn-sm"
-                      style={{ color: s.isSimulated ? 'var(--green)' : 'var(--text-sub)' }}
-                      onClick={() => handleToggleSimulation(s)}
-                    >{s.isSimulated ? 'Live ↩' : 'Simulate'}</button>
                     <button className="btn btn-outline btn-sm" style={{ color: 'var(--blue)' }} onClick={() => openAuth(s)}>Auth</button>
                     <button className="btn btn-danger btn-sm" onClick={() => handleDelete(s.id)}>Del</button>
                   </div>

@@ -58,13 +58,6 @@ export default function AdminSources() {
     } catch { setErr('Auth save failed.') }
   }
 
-  async function handleToggleSimulation(s: LegacySource) {
-    try {
-      await sourcesApi.toggleSimulation(s.id, !s.isSimulated)
-      load()
-    } catch { alert('Toggle simulation failed.') }
-  }
-
   async function handleDelete(id: string) {
     if (!confirm('Delete this source?')) return
     try { await sourcesApi.delete(id); load() } catch { alert('Delete failed.') }
@@ -113,12 +106,6 @@ export default function AdminSources() {
                   <div className="actions">
                     <button className="btn btn-outline btn-sm" onClick={() => openSwagger(s.id)}>Swagger</button>
                     <button className="btn btn-outline btn-sm" onClick={() => openEdit(s)}>Edit</button>
-                    <button
-                      className="btn btn-outline btn-sm"
-                      style={{ color: s.isSimulated ? 'var(--green)' : 'var(--text-sub)' }}
-                      onClick={() => handleToggleSimulation(s)}
-                      title={s.isSimulated ? 'Désactiver simulation' : 'Activer simulation'}
-                    >{s.isSimulated ? 'Live ↩' : 'Simulate'}</button>
                     <button className="btn btn-blue btn-sm" style={{ background: 'var(--blue-lt)', color: 'var(--blue)' }} onClick={() => openAuth(s)}>Auth</button>
                     <button className="btn btn-danger btn-sm" onClick={() => handleDelete(s.id)}>Del</button>
                   </div>
