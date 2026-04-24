@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
-import { login as apiLogin, impersonate as apiImpersonate, extractClaims } from '../api/auth'
+import { login as apiLogin, impersonate as apiImpersonate, logoutApi, extractClaims } from '../api/auth'
 import type { UserRole } from '../api/types'
 
 interface AuthUser {
@@ -52,19 +52,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [token])
 
   const login = useCallback(async (email: string, password: string) => {
-    const t = await apiLogin(email, password)
-    localStorage.setItem('lb_email', email)
-    setToken(t)
-    setUser(parseUser(t, email)!)
+    const res = await apiLogin(email, password)
+    localStorage.setItem('lb_email',         email)
+    localStorage.setItem('lb_refresh_token', res.refreshToken)
+    setToken(res.token)
+    setUser(parseUser(res.token, email)!)
     setOriginalToken(null)
     setImpersonatedEmail(null)
   }, [])
 
   const logout = useCallback(() => {
+    logoutApi() // best-effort server-side revocation
     setToken(null)
     setUser(null)
     setOriginalToken(null)
     setImpersonatedEmail(null)
+    localStorage.removeItem('lb_token')
+    localStorage.removeItem('lb_refresh_token')
     localStorage.removeItem('lb_original_token')
     localStorage.removeItem('lb_impersonated_email')
   }, [])

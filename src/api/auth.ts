@@ -1,14 +1,23 @@
 import { api } from './client'
 
-interface LoginResponse { token: string }
+interface LoginResponse { token: string; refreshToken: string }
 interface ImpersonateResponse { token: string; targetEmail: string; targetRole: string }
 
-export async function login(email: string, password: string): Promise<string> {
+export async function login(email: string, password: string): Promise<{ token: string; refreshToken: string }> {
   const res = await api.post<LoginResponse>('/auth/login', {
     cUserAccount: email,
     cUserPwd: password,
   })
-  return res.token
+  return res
+}
+
+export async function refreshTokenApi(refreshToken: string): Promise<{ token: string; refreshToken: string }> {
+  const res = await api.post<LoginResponse>('/auth/refresh', { refreshToken })
+  return res
+}
+
+export async function logoutApi(): Promise<void> {
+  try { await api.post('/auth/logout', {}) } catch { /* best-effort */ }
 }
 
 export async function impersonate(userId: string): Promise<ImpersonateResponse> {
