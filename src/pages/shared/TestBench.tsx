@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react'
-import { sourcesApi, systemTypeLabels } from '../../api/sources'
-import type { LegacySource, LegacySystemType } from '../../api/types'
+import { useState } from 'react'
+import type { LegacySystemType } from '../../api/types'
 
 // ─── Request format builders per system type ──────────────────────────────────
 
@@ -29,7 +28,6 @@ ${fields.split('\n').map(l => '      ' + l).join('\n')}
 </soapenv:Envelope>`
 
 const asmxReq = (method: string, fields: string) => {
-  // Convert XML fields like <P-CLI-CODE>C001</P-CLI-CODE> → { "P-CLI-CODE": "C001" }
   const jsonFields = fields
     .split('\n')
     .map(l => l.trim())
@@ -169,8 +167,8 @@ interface MethodDef {
   faultDetail:     string
   faultLabel?:     string
   faultIsVariant?: boolean
-  xmlFields:       string  // raw XML fields for request body
-  xmlVariantFields?: string // for faultIsVariant (shown as response, not fault)
+  xmlFields:       string
+  xmlVariantFields?: string
 }
 
 interface EntityDef { label: string; methods: MethodDef[] }
@@ -281,51 +279,19 @@ function prettyJson(raw: string): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function TestBench() {
-  const [sources,      setSources]      = useState<LegacySource[]>([])
-  const [sourceId,     setSourceId]     = useState<string>('')
-  const [systemType,   setSystemType]   = useState<LegacySystemType>('OpenEdgeSoap')
-  const [typeOverride, setTypeOverride] = useState(false)
-  const [entityKey,    setEntityKey]    = useState('Client')
-  const [methodIdx,    setMethodIdx]    = useState(0)
-  const [isFault,      setIsFault]      = useState(false)
+  const [systemType, setSystemType] = useState<LegacySystemType>('OpenEdgeSoap')
+  const [entityKey,  setEntityKey]  = useState('Client')
+  const [methodIdx,  setMethodIdx]  = useState(0)
+  const [isFault,    setIsFault]    = useState(false)
 
-  useEffect(() => {
-    sourcesApi.getAll().then(list => {
-      setSources(list)
-      if (list.length > 0) {
-        setSourceId(list[0].id)
-        setSystemType(list[0].systemType)
-      }
-    }).catch(() => {})
-  }, [])
-
-  function selectSource(id: string) {
-    setSourceId(id)
-    const src = sources.find(s => s.id === id)
-    if (src && !typeOverride) setSystemType(src.systemType)
-  }
-
-  function selectType(t: LegacySystemType) {
-    setSystemType(t)
-    setTypeOverride(true)
-  }
-
-  // Reset override when source changes manually and user didn't explicitly choose type
-  function handleSourceChange(id: string) {
-    setTypeOverride(false)
-    selectSource(id)
-  }
-
-  // ── Derived ────────────────────────────────────────────────────────────────
   const entity   = ENTITIES[entityKey]
   const methods  = entity.methods
   const safeIdx  = Math.min(methodIdx, methods.length - 1)
   const method   = methods[safeIdx]
 
-  const isOpenEdge    = systemType === 'OpenEdgeSoap'
-  const faultLabel    = method.faultLabel ?? (isOpenEdge ? 'SOAP Fault' : 'Error')
+  const isOpenEdge = systemType === 'OpenEdgeSoap'
+  const faultLabel = method.faultLabel ?? (isOpenEdge ? 'SOAP Fault' : 'Error')
 
-  // Left panel (request)
   let leftContent: string
   if (isFault && method.faultIsVariant && isOpenEdge) {
     leftContent = oeResp(method.nominal, method.xmlVariantFields ?? '')
@@ -338,14 +304,13 @@ export default function TestBench() {
     leftContent = buildNominalReq(method.nominal, method.xmlFields, systemType)
   }
 
-  // Right panel (response) — illustrative static format
   const rightContent = isFault
     ? buildFaultResponse(method.faultCode, method.faultMsg, method.faultDetail, systemType)
     : buildNominalResponse(method.nominal, systemType)
 
-  const faultColor  = 'var(--red, #c0392b)'
-  const okColor     = 'var(--green, #27ae60)'
-  const xmlColor    = isOpenEdge ? 'var(--blue)' : 'var(--text-sub)'
+  const faultColor = 'var(--red, #c0392b)'
+  const okColor    = 'var(--green, #27ae60)'
+  const xmlColor   = isOpenEdge ? 'var(--blue)' : 'var(--text-sub)'
 
   const leftLabel = isFault
     ? (method.faultIsVariant
@@ -355,11 +320,8 @@ export default function TestBench() {
 
   const rightLabel = isFault ? 'JSON error response' : 'JSON response'
 
-  const selectedSource = sources.find(s => s.id === sourceId)
-
   return (
     <div className="page">
-      {/* Header */}
       <div className="page-hd">
         <div>
           <h1>Test Bench</h1>
@@ -367,52 +329,6 @@ export default function TestBench() {
         </div>
       </div>
 
-      {/* Source + type selector bar */}
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap', padding: '8px 0' }}>
-          {/* Source */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 240 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-sub)', whiteSpace: 'nowrap' }}>SOURCE</span>
-            <select
-              value={sourceId}
-              onChange={e => handleSourceChange(e.target.value)}
-              style={{ flex: 1, fontSize: 13, padding: '5px 8px', borderRadius: 4, border: '1px solid var(--border)' }}
-            >
-              {sources.length === 0 && <option value="">No sources available</option>}
-              {sources.map(s => (
-                <option key={s.id} value={s.id}>
-                  {systemTypeLabels[s.systemType as unknown as number] ?? s.systemType}
-                  {' · '}
-                  {s.systemUrl.replace(/^https?:\/\//, '').slice(0, 48)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* System type */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-sub)', whiteSpace: 'nowrap' }}>TYPE</span>
-            <select
-              value={systemType}
-              onChange={e => selectType(e.target.value as LegacySystemType)}
-              style={{ fontSize: 13, padding: '5px 8px', borderRadius: 4, border: '1px solid var(--border)' }}
-            >
-              {SYSTEM_TYPES.map(t => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
-            {typeOverride && selectedSource && selectedSource.systemType !== systemType && (
-              <button
-                onClick={() => { setTypeOverride(false); setSystemType(selectedSource.systemType) }}
-                style={{ fontSize: 11, color: 'var(--text-sub)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
-              >reset</button>
-            )}
-          </div>
-
-        </div>
-      </div>
-
-      {/* Main test area */}
       <div className="card" style={{ padding: 0 }}>
 
         {/* Controls */}
@@ -420,6 +336,18 @@ export default function TestBench() {
           display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
           padding: '10px 20px', borderBottom: '1px solid var(--border)',
         }}>
+          {/* System type */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 11, color: 'var(--text-sub)', fontWeight: 700 }}>TYPE</span>
+            <select
+              value={systemType}
+              onChange={e => setSystemType(e.target.value as LegacySystemType)}
+              style={{ fontSize: 13, padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border)' }}
+            >
+              {SYSTEM_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+          </div>
+
           {/* Entity */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 11, color: 'var(--text-sub)', fontWeight: 700 }}>ENTITY</span>
@@ -467,8 +395,6 @@ export default function TestBench() {
 
         {/* Split view */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: 400 }}>
-
-          {/* Left — request */}
           <div style={{ padding: '12px 16px', borderRight: '1px solid var(--border)' }}>
             <div style={{
               fontSize: 11, fontWeight: 700, marginBottom: 6,
@@ -491,7 +417,6 @@ export default function TestBench() {
             />
           </div>
 
-          {/* Right — response */}
           <div style={{ padding: '12px 16px' }}>
             <div style={{
               fontSize: 11, fontWeight: 700, marginBottom: 6,
@@ -521,9 +446,7 @@ export default function TestBench() {
           fontSize: 11, color: 'var(--text-sub)', display: 'flex', justifyContent: 'space-between',
         }}>
           <span>Request and response formats are illustrative</span>
-          <span style={{ color: 'var(--text-sub)' }}>
-            {systemType === 'AsmxDotNet' ? 'ASMX .NET · REST/JSON' : `${SYSTEM_TYPES.find(t => t.value === systemType)?.label} · SOAP`}
-          </span>
+          <span>{systemType === 'AsmxDotNet' ? 'ASMX .NET · REST/JSON' : `${SYSTEM_TYPES.find(t => t.value === systemType)?.label} · SOAP`}</span>
         </div>
       </div>
     </div>
