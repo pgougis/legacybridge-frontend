@@ -19,6 +19,7 @@ export interface UserDto {
   apiCallCount: number
   apiCallDailyLimit: number | null
   ownerManagerId: string | null
+  emailConfirmed: boolean
 }
 
 export type LegacySystemType = 'OpenEdgeSoap' | 'GenericSoap' | 'AsmxDotNet' | 'OracleSoap'

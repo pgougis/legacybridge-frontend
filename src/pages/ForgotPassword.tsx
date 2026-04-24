@@ -16,7 +16,7 @@ export default function ForgotPassword() {
       await api.post('/auth/forgot-password', { email })
       setSent(true)
     } catch {
-      setError('Une erreur est survenue. Réessaie plus tard.')
+      setError('An error occurred. Please try again later.')
     } finally {
       setLoading(false)
     }
@@ -26,27 +26,27 @@ export default function ForgotPassword() {
     <div className="login-page">
       <div className="login-box">
         <div className="login-logo">⚡ LegacyBridge</div>
-        <div className="login-sub">Mot de passe oublié</div>
+        <div className="login-sub">Forgot password</div>
 
         {sent ? (
           <div style={{ textAlign: 'center', padding: '16px 0' }}>
             <div style={{ fontSize: 32, marginBottom: 12 }}>📬</div>
             <p style={{ color: 'var(--text-2)', fontSize: 14, lineHeight: 1.6 }}>
-              Si un compte existe pour <strong>{email}</strong>, un lien de réinitialisation a été envoyé.
+              If an account exists for <strong>{email}</strong>, a reset link has been sent.
             </p>
-            <Link to="/login" style={{ color: 'var(--blue)', fontSize: 13 }}>Retour à la connexion</Link>
+            <Link to="/login" style={{ color: 'var(--blue)', fontSize: 13 }}>Back to sign in</Link>
           </div>
         ) : (
           <>
             {error && <div className="login-error">{error}</div>}
             <form onSubmit={handleSubmit}>
               <div className="form-field">
-                <label>Adresse email</label>
+                <label>Email address</label>
                 <input
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="toi@exemple.com"
+                  placeholder="you@example.com"
                   required
                   autoFocus
                 />
@@ -57,11 +57,11 @@ export default function ForgotPassword() {
                 style={{ width: '100%', justifyContent: 'center', marginTop: 8 }}
                 disabled={loading}
               >
-                {loading ? 'Envoi…' : 'Envoyer le lien'}
+                {loading ? 'Sending…' : 'Send reset link'}
               </button>
             </form>
             <div style={{ textAlign: 'center', marginTop: 16 }}>
-              <Link to="/login" style={{ color: 'var(--text-3)', fontSize: 13 }}>Retour à la connexion</Link>
+              <Link to="/login" style={{ color: 'var(--text-3)', fontSize: 13 }}>Back to sign in</Link>
             </div>
           </>
         )}

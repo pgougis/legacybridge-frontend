@@ -14,9 +14,9 @@ export default function ManagerUsers() {
   const { user } = useAuth()
   const [rows, setRows]       = useState<UserDto[]>([])
   const [search, setSearch]   = useState('')
-  const [modal, setModal]     = useState<'create' | 'edit' | 'pwd' | 'usage' | null>(null)
+  const [modal, setModal]     = useState<'invite' | 'edit' | 'pwd' | 'usage' | null>(null)
   const [editing, setEditing] = useState<UserDto | null>(null)
-  const [form, setForm]       = useState({ email: '', password: '', firstName: '', lastName: '', role: 'Member' as UserRole, dailyLimit: '' })
+  const [form, setForm]       = useState({ email: '', firstName: '', lastName: '', role: 'Member' as UserRole, dailyLimit: '' })
   const [pwd, setPwd]         = useState('')
   const [err, setErr]         = useState('')
 
@@ -29,28 +29,36 @@ export default function ManagerUsers() {
     `${r.firstName} ${r.lastName} ${r.email}`.toLowerCase().includes(search.toLowerCase())
   )
 
-  function openCreate() {
-    setForm({ email: '', password: '', firstName: '', lastName: '', role: 'Member', dailyLimit: '' })
-    setEditing(null); setErr(''); setModal('create')
+  function openInvite() {
+    setForm({ email: '', firstName: '', lastName: '', role: 'Member', dailyLimit: '' })
+    setEditing(null); setErr(''); setModal('invite')
   }
   function openEdit(u: UserDto) {
-    setForm({ email: u.email, password: '', firstName: u.firstName, lastName: u.lastName, role: u.role, dailyLimit: u.apiCallDailyLimit != null ? String(u.apiCallDailyLimit) : '' })
+    setForm({ email: u.email, firstName: u.firstName, lastName: u.lastName, role: u.role, dailyLimit: u.apiCallDailyLimit != null ? String(u.apiCallDailyLimit) : '' })
     setEditing(u); setErr(''); setModal('edit')
   }
 
-  async function handleSave() {
+  async function handleInvite() {
+    setErr('')
+    try {
+      await usersApi.invite({ email: form.email, firstName: form.firstName, lastName: form.lastName, role: roleNum(form.role), customerId: user!.customerId })
+      setModal(null); load()
+    } catch (e: unknown) {
+      try { setErr(JSON.parse((e as Error).message)?.detail || 'Invitation failed.') }
+      catch { setErr('Invitation failed.') }
+    }
+  }
+
+  async function handleEdit() {
+    if (!editing) return
     setErr('')
     const limit = form.dailyLimit !== '' ? parseInt(form.dailyLimit, 10) : undefined
     try {
-      if (modal === 'create') {
-        await usersApi.create({ ...form, role: roleNum(form.role), customerId: user!.customerId })
-      } else if (editing) {
-        await usersApi.update(editing.id, {
-          email: form.email, firstName: form.firstName,
-          lastName: form.lastName, role: roleNum(form.role),
-          apiCallDailyLimit: isNaN(limit as number) ? undefined : limit,
-        })
-      }
+      await usersApi.update(editing.id, {
+        email: form.email, firstName: form.firstName,
+        lastName: form.lastName, role: roleNum(form.role),
+        apiCallDailyLimit: isNaN(limit as number) ? undefined : limit,
+      })
       setModal(null); load()
     } catch (e: unknown) {
       try { setErr(JSON.parse((e as Error).message)?.detail || 'Save failed.') }
@@ -73,7 +81,7 @@ export default function ManagerUsers() {
     <div className="page">
       <div className="page-hd">
         <div><h1>Users</h1><p>Manage your team members</p></div>
-        <button className="btn btn-primary" onClick={openCreate}>+ New User</button>
+        <button className="btn btn-primary" onClick={openInvite}>+ Invite</button>
       </div>
 
       <div className="card">
@@ -84,7 +92,7 @@ export default function ManagerUsers() {
         </div>
         <table>
           <thead>
-            <tr><th>Name</th><th>Email</th><th>Role</th><th>API Calls</th><th>Daily Limit</th><th>Created</th><th></th></tr>
+            <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>API Calls</th><th>Daily Limit</th><th>Created</th><th></th></tr>
           </thead>
           <tbody>
             {filtered.map(u => (
@@ -92,6 +100,10 @@ export default function ManagerUsers() {
                 <td>{u.firstName} {u.lastName}</td>
                 <td className="sub">{u.email}</td>
                 <td><span className={`pill ${roleClass[u.role]}`}>{u.role}</span></td>
+                <td>{u.emailConfirmed
+                  ? <span className="pill green">Active</span>
+                  : <span className="pill orange">Pending</span>}
+                </td>
                 <td><span className="pill blue">{u.apiCallCount.toLocaleString()}</span></td>
                 <td>{u.apiCallDailyLimit != null
                   ? <span className="pill orange">{u.apiCallDailyLimit.toLocaleString()} / day</span>
@@ -109,17 +121,54 @@ export default function ManagerUsers() {
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={7}><div className="empty"><div className="icon">👤</div>No users found</div></td></tr>
+              <tr><td colSpan={8}><div className="empty"><div className="icon">👤</div>No users found</div></td></tr>
             )}
           </tbody>
         </table>
       </div>
 
-      {(modal === 'create' || modal === 'edit') && (
+      {/* Invite modal */}
+      {modal === 'invite' && (
         <div className="modal-backdrop" onClick={() => setModal(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-head">
-              <h2>{modal === 'create' ? 'New User' : 'Edit User'}</h2>
+              <h2>Invite a user</h2>
+              <button className="modal-close" onClick={() => setModal(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              {err && <div className="err-toast">{err}</div>}
+              <div className="form-row2">
+                <div className="form-field">
+                  <label>First Name</label>
+                  <input value={form.firstName} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} autoFocus />
+                </div>
+                <div className="form-field">
+                  <label>Last Name</label>
+                  <input value={form.lastName} onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} />
+                </div>
+              </div>
+              <div className="form-field">
+                <label>Email</label>
+                <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 0' }}>
+                An invitation email will be sent. The user will set their own password.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={() => setModal(null)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleInvite}>Send Invite</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit modal */}
+      {modal === 'edit' && (
+        <div className="modal-backdrop" onClick={() => setModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
+              <h2>Edit User</h2>
               <button className="modal-close" onClick={() => setModal(null)}>×</button>
             </div>
             <div className="modal-body">
@@ -138,32 +187,24 @@ export default function ManagerUsers() {
                 <label>Email</label>
                 <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
               </div>
-              {modal === 'create' && (
-                <div className="form-field">
-                  <label>Password</label>
-                  <input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
-                </div>
-              )}
               <div className="form-field">
                 <label>Role</label>
                 <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value as UserRole }))}>
                   {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               </div>
-              {modal === 'edit' && (
-                <div className="form-field">
-                  <label>Daily API Call Limit (blank = unlimited)</label>
-                  <input
-                    type="number" min="0" placeholder="e.g. 500"
-                    value={form.dailyLimit}
-                    onChange={e => setForm(f => ({ ...f, dailyLimit: e.target.value }))}
-                  />
-                </div>
-              )}
+              <div className="form-field">
+                <label>Daily API Call Limit (blank = unlimited)</label>
+                <input
+                  type="number" min="0" placeholder="e.g. 500"
+                  value={form.dailyLimit}
+                  onChange={e => setForm(f => ({ ...f, dailyLimit: e.target.value }))}
+                />
+              </div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-outline" onClick={() => setModal(null)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleSave}>Save</button>
+              <button className="btn btn-primary" onClick={handleEdit}>Save</button>
             </div>
           </div>
         </div>

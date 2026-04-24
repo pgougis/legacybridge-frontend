@@ -3,6 +3,7 @@ import { useAuth } from './ctx/auth'
 import Login           from './pages/Login'
 import ForgotPassword  from './pages/ForgotPassword'
 import ResetPassword   from './pages/ResetPassword'
+import AcceptInvite    from './pages/AcceptInvite'
 import AdminDashboard   from './pages/admin/Dashboard'
 import AdminCustomers   from './pages/admin/Customers'
 import AdminUsers       from './pages/admin/Users'
@@ -51,6 +52,7 @@ export default function App() {
       <Route path="/login"           element={user ? <Navigate to={home(user.role)} replace /> : <Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password"  element={<ResetPassword />} />
+      <Route path="/accept-invite"   element={<AcceptInvite />} />
 
       {/* Admin */}
       <Route path="/admin" element={<RequireAuth roles={['Admin']}><Shell /></RequireAuth>}>

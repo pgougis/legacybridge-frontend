@@ -18,7 +18,7 @@ export default function AdminUsers() {
   const [rows, setRows]           = useState<UserDto[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [search, setSearch]       = useState('')
-  const [modal, setModal]         = useState<'create' | 'edit' | 'pwd' | 'usage' | null>(null)
+  const [modal, setModal]         = useState<'invite' | 'create' | 'edit' | 'pwd' | 'usage' | null>(null)
   const [editing, setEditing]     = useState<UserDto | null>(null)
   const [form, setForm]           = useState({
     email: '', password: '', firstName: '', lastName: '',
@@ -38,6 +38,11 @@ export default function AdminUsers() {
     `${r.firstName} ${r.lastName} ${r.email}`.toLowerCase().includes(search.toLowerCase())
   )
 
+  function openInvite() {
+    setForm({ email: '', password: '', firstName: '', lastName: '', role: 'Member', customerId: customers[0]?.id ?? '', dailyLimit: '' })
+    setEditing(null); setErr(''); setModal('invite')
+  }
+
   function openEdit(u: UserDto) {
     setForm({
       email: u.email, password: '', firstName: u.firstName, lastName: u.lastName,
@@ -45,6 +50,17 @@ export default function AdminUsers() {
       dailyLimit: u.apiCallDailyLimit != null ? String(u.apiCallDailyLimit) : '',
     })
     setEditing(u); setErr(''); setModal('edit')
+  }
+
+  async function handleInvite() {
+    setErr('')
+    try {
+      await usersApi.invite({ email: form.email, firstName: form.firstName, lastName: form.lastName, role: roleNum(form.role), customerId: form.customerId })
+      setModal(null); load()
+    } catch (e: unknown) {
+      try { setErr(JSON.parse((e as Error).message)?.detail || 'Invitation failed.') }
+      catch { setErr('Invitation failed.') }
+    }
   }
 
   async function handleSave() {
@@ -100,6 +116,7 @@ export default function AdminUsers() {
     <div className="page">
       <div className="page-hd">
         <div><h1>Users</h1><p>All platform users</p></div>
+        <button className="btn btn-primary" onClick={openInvite}>+ Invite</button>
       </div>
 
       <div className="card">
@@ -110,7 +127,7 @@ export default function AdminUsers() {
         </div>
         <table>
           <thead>
-            <tr><th>Name</th><th>Email</th><th>Role</th><th>Customer</th><th>API Calls</th><th>Daily Limit</th><th>Created</th><th></th></tr>
+            <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Customer</th><th>API Calls</th><th>Daily Limit</th><th>Created</th><th></th></tr>
           </thead>
           <tbody>
             {filtered.map(u => (
@@ -118,6 +135,10 @@ export default function AdminUsers() {
                 <td>{u.firstName} {u.lastName}</td>
                 <td className="sub">{u.email}</td>
                 <td><span className={`pill ${roleClass[u.role]}`}>{u.role}</span></td>
+                <td>{u.emailConfirmed
+                  ? <span className="pill green">Active</span>
+                  : <span className="pill orange">Pending</span>}
+                </td>
                 <td className="sub">{custName(u.customerId)}</td>
                 <td><span className="pill purple">{u.apiCallCount.toLocaleString()}</span></td>
                 <td>{limitBadge(u)}</td>
@@ -142,11 +163,60 @@ export default function AdminUsers() {
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={8}><div className="empty"><div className="icon">👤</div>No users found</div></td></tr>
+              <tr><td colSpan={9}><div className="empty"><div className="icon">👤</div>No users found</div></td></tr>
             )}
           </tbody>
         </table>
       </div>
+
+      {modal === 'invite' && (
+        <div className="modal-backdrop" onClick={() => setModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
+              <h2>Invite a user</h2>
+              <button className="modal-close" onClick={() => setModal(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              {err && <div className="err-toast">{err}</div>}
+              <div className="form-row2">
+                <div className="form-field">
+                  <label>First Name</label>
+                  <input value={form.firstName} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} autoFocus />
+                </div>
+                <div className="form-field">
+                  <label>Last Name</label>
+                  <input value={form.lastName} onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} />
+                </div>
+              </div>
+              <div className="form-field">
+                <label>Email</label>
+                <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+              </div>
+              <div className="form-row2">
+                <div className="form-field">
+                  <label>Role</label>
+                  <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value as UserRole }))}>
+                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </div>
+                <div className="form-field">
+                  <label>Customer</label>
+                  <select value={form.customerId} onChange={e => setForm(f => ({ ...f, customerId: e.target.value }))}>
+                    {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 0' }}>
+                An invitation email will be sent. The user will set their own password.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={() => setModal(null)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleInvite}>Send Invite</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {(modal === 'create' || modal === 'edit') && (
         <div className="modal-backdrop" onClick={() => setModal(null)}>
