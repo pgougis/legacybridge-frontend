@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './ctx/auth'
+import { extractClaims } from './api/auth'
 import Login           from './pages/Login'
 import ForgotPassword  from './pages/ForgotPassword'
 import ResetPassword   from './pages/ResetPassword'
@@ -39,8 +40,20 @@ function UsageSelectable() {
 
 function RequireAuth({ roles, children }: { roles: string[]; children: React.ReactNode }) {
   const { user } = useAuth()
-  if (!user) return <Navigate to="/login" replace />
-  if (!roles.includes(user.role)) return <Navigate to="/login" replace />
+
+  // During impersonation, localStorage is updated synchronously before React state flushes.
+  // Fall back to localStorage token so navigation doesn't redirect to /login during the gap.
+  const role: string | null = user?.role ?? (() => {
+    try {
+      const t = localStorage.getItem('lb_token')
+      if (!t) return null
+      const r = extractClaims(t).role
+      return r || null
+    } catch { return null }
+  })()
+
+  if (!role) return <Navigate to="/login" replace />
+  if (!roles.includes(role)) return <Navigate to="/login" replace />
   return <>{children}</>
 }
 
