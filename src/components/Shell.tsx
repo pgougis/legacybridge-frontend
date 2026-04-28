@@ -15,7 +15,8 @@ const adminNav = (): NavItem[] => [
   { to: '/admin/plans',      icon: '📋', label: 'Access Plans' },
   { to: '/admin/testbench',  icon: '⚗',  label: 'Test Bench', color: 'orange' },
   { to: '/admin/usage',      icon: '📊', label: 'Usage' },
-  { to: '/admin/logs', icon: '⚠', label: 'API Error Logs' },
+  { to: '/admin/logs',  icon: '⚠', label: 'API Error Logs' },
+  { to: '/admin/audit', icon: '🔍', label: 'Audit Trail' },
   { to: '', href: '/swagger', icon: '📖', label: 'Swagger API' },
 ]
 

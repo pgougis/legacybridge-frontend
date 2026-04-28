@@ -9,6 +9,7 @@ import AdminCustomers   from './pages/admin/Customers'
 import AdminUsers       from './pages/admin/Users'
 import AdminSources     from './pages/admin/Sources'
 import AdminPlans       from './pages/admin/Plans'
+import AdminAudit       from './pages/admin/Audit'
 import ManagerDashboard from './pages/manager/Dashboard'
 import ManagerUsers     from './pages/manager/Users'
 import ManagerSources   from './pages/manager/Sources'
@@ -63,6 +64,7 @@ export default function App() {
         <Route path="plans"      element={<AdminPlans />} />
         <Route path="testbench"  element={<TestBench />} />
         <Route path="logs"       element={<Logs selectable />} />
+        <Route path="audit"      element={<AdminAudit />} />
         <Route path="usage"      element={<UsageSelectable />} />
         <Route index element={<Navigate to="dashboard" replace />} />
       </Route>
