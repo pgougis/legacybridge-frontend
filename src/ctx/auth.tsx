@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { login as apiLogin, impersonate as apiImpersonate, logoutApi, extractClaims } from '../api/auth'
 import type { UserRole } from '../api/types'
 
@@ -80,10 +81,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('lb_original_token', saved)
     }
     localStorage.setItem('lb_impersonated_email', email)
-    setOriginalToken(prev => prev ?? saved)
-    setToken(res.token)
-    setUser(parseUser(res.token)!)
-    setImpersonatedEmail(email)
+    flushSync(() => {
+      setOriginalToken(prev => prev ?? saved)
+      setToken(res.token)
+      setUser(parseUser(res.token)!)
+      setImpersonatedEmail(email)
+    })
   }, [token])
 
   const exitImpersonation = useCallback(() => {
