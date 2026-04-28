@@ -41,15 +41,17 @@ function UsageSelectable() {
 function RequireAuth({ roles, children }: { roles: string[]; children: React.ReactNode }) {
   const { user } = useAuth()
 
-  // During impersonation, localStorage is updated synchronously before React state flushes.
-  // Fall back to localStorage token so navigation doesn't redirect to /login during the gap.
-  const role: string | null = user?.role ?? (() => {
+  // Always read from localStorage first — it's updated synchronously during impersonation,
+  // so it's always ahead of the async React context state. Fall back to context if no token.
+  const role = (() => {
     try {
       const t = localStorage.getItem('lb_token')
-      if (!t) return null
-      const r = extractClaims(t).role
-      return r || null
-    } catch { return null }
+      if (t) {
+        const r = extractClaims(t).role
+        if (r) return r
+      }
+    } catch { /* fall through */ }
+    return user?.role ?? null
   })()
 
   if (!role) return <Navigate to="/login" replace />
