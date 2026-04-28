@@ -101,8 +101,13 @@ export default function AdminUsers() {
 
   async function handleImpersonate(u: UserDto) {
     try {
+      console.log('[impersonate] u.role=', u.role, 'typeof=', typeof u.role)
       const role = await impersonate(u.id, u.email)
-      window.location.href = homeFor(role)
+      console.log('[impersonate] returned role=', role, 'typeof=', typeof role)
+      const dest = homeFor(role)
+      console.log('[impersonate] dest=', dest)
+      if (!dest) { alert('homeFor returned undefined for role: ' + String(role)); return }
+      window.location.href = dest
     } catch (err) {
       console.error('Impersonate error:', err)
       alert('Impersonation failed: ' + (err instanceof Error ? err.message : String(err)))
