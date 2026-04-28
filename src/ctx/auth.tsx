@@ -81,12 +81,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     localStorage.setItem('lb_impersonated_email', email)
     localStorage.setItem('lb_token', res.token)
-    const parsed = parseUser(res.token)!
+    const parsed = parseUser(res.token)
     setOriginalToken(prev => prev ?? saved)
     setToken(res.token)
     setUser(parsed)
     setImpersonatedEmail(email)
-    return parsed.role
+    // targetRole from the API response is always a valid role string
+    return (parsed?.role ?? res.targetRole) as UserRole
   }, [token])
 
   const exitImpersonation = useCallback(() => {
