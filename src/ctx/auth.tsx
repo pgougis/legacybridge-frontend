@@ -81,13 +81,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     localStorage.setItem('lb_impersonated_email', email)
     localStorage.setItem('lb_token', res.token)
-    const parsed = parseUser(res.token)
-    setOriginalToken(prev => prev ?? saved)
-    setToken(res.token)
-    setUser(parsed)
-    setImpersonatedEmail(email)
-    // targetRole from the API response is always a valid role string
-    return (parsed?.role ?? res.targetRole) as UserRole
+    // No setState — window.location.href in the caller triggers a full reload,
+    // the auth context will re-initialize from localStorage on the new page.
+    return res.targetRole as UserRole
   }, [token])
 
   const exitImpersonation = useCallback(() => {
