@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { usersApi, roleNum } from '../../api/users'
 import { customersApi } from '../../api/customers'
 import { useAuth, homeFor } from '../../ctx/auth'
@@ -14,7 +13,7 @@ const roleClass: Record<UserRole, string> = {
 
 export default function AdminUsers() {
   const { impersonate } = useAuth()
-  const navigate = useNavigate()
+
   const [rows, setRows]           = useState<UserDto[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [search, setSearch]       = useState('')
@@ -102,7 +101,7 @@ export default function AdminUsers() {
 
   async function handleImpersonate(u: UserDto) {
     await impersonate(u.id, u.email)
-    navigate(homeFor(u.role))
+    window.location.href = homeFor(u.role)
   }
 
   const custName = (id: string) => customers.find(c => c.id === id)?.name ?? id.slice(0, 8)

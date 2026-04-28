@@ -1,6 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './ctx/auth'
-import { extractClaims } from './api/auth'
 import Login           from './pages/Login'
 import ForgotPassword  from './pages/ForgotPassword'
 import ResetPassword   from './pages/ResetPassword'
@@ -40,22 +39,8 @@ function UsageSelectable() {
 
 function RequireAuth({ roles, children }: { roles: string[]; children: React.ReactNode }) {
   const { user } = useAuth()
-
-  // Always read from localStorage first — it's updated synchronously during impersonation,
-  // so it's always ahead of the async React context state. Fall back to context if no token.
-  const role = (() => {
-    try {
-      const t = localStorage.getItem('lb_token')
-      if (t) {
-        const r = extractClaims(t).role
-        if (r) return r
-      }
-    } catch { /* fall through */ }
-    return user?.role ?? null
-  })()
-
-  if (!role) return <Navigate to="/login" replace />
-  if (!roles.includes(role)) return <Navigate to="/login" replace />
+  if (!user) return <Navigate to="/login" replace />
+  if (!roles.includes(user.role)) return <Navigate to="/login" replace />
   return <>{children}</>
 }
 

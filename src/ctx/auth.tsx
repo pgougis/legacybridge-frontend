@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('lb_original_token', saved)
     }
     localStorage.setItem('lb_impersonated_email', email)
-    localStorage.setItem('lb_token', res.token)   // sync before navigate
+    localStorage.setItem('lb_token', res.token)
     setOriginalToken(prev => prev ?? saved)
     setToken(res.token)
     setUser(parseUser(res.token)!)
