@@ -100,8 +100,8 @@ export default function AdminUsers() {
   }
 
   async function handleImpersonate(u: UserDto) {
-    await impersonate(u.id, u.email)
-    window.location.href = homeFor(u.role)
+    const role = await impersonate(u.id, u.email)
+    window.location.href = homeFor(role)
   }
 
   const custName = (id: string) => customers.find(c => c.id === id)?.name ?? id.slice(0, 8)

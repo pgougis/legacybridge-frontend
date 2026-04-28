@@ -16,7 +16,7 @@ interface AuthCtx {
   impersonatedEmail: string | null
   login: (email: string, password: string) => Promise<void>
   logout: () => void
-  impersonate: (userId: string, email: string) => Promise<void>
+  impersonate: (userId: string, email: string) => Promise<UserRole>
   exitImpersonation: () => void
 }
 
@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('lb_impersonated_email')
   }, [])
 
-  const impersonate = useCallback(async (userId: string, email: string) => {
+  const impersonate = useCallback(async (userId: string, email: string): Promise<UserRole> => {
     const res = await apiImpersonate(userId)
     const saved = token
     if (!localStorage.getItem('lb_original_token') && saved) {
@@ -81,10 +81,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     localStorage.setItem('lb_impersonated_email', email)
     localStorage.setItem('lb_token', res.token)
+    const parsed = parseUser(res.token)!
     setOriginalToken(prev => prev ?? saved)
     setToken(res.token)
-    setUser(parseUser(res.token)!)
+    setUser(parsed)
     setImpersonatedEmail(email)
+    return parsed.role
   }, [token])
 
   const exitImpersonation = useCallback(() => {
