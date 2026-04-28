@@ -55,6 +55,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const res = await apiLogin(email, password)
     localStorage.setItem('lb_email',         email)
     localStorage.setItem('lb_refresh_token', res.refreshToken)
+    localStorage.removeItem('lb_original_token')
+    localStorage.removeItem('lb_impersonated_email')
     setToken(res.token)
     setUser(parseUser(res.token, email)!)
     setOriginalToken(null)
@@ -75,15 +77,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const impersonate = useCallback(async (userId: string, email: string): Promise<UserRole> => {
     const res = await apiImpersonate(userId)
+    const targetRole = res.targetRole as UserRole
+    if (!VALID_ROLES.includes(targetRole)) {
+      throw new Error(`User has an invalid role (${res.targetRole}). Edit the user's role first.`)
+    }
     const saved = token
     if (!localStorage.getItem('lb_original_token') && saved) {
       localStorage.setItem('lb_original_token', saved)
     }
     localStorage.setItem('lb_impersonated_email', email)
     localStorage.setItem('lb_token', res.token)
-    // No setState — window.location.href in the caller triggers a full reload,
-    // the auth context will re-initialize from localStorage on the new page.
-    return res.targetRole as UserRole
+    return targetRole
   }, [token])
 
   const exitImpersonation = useCallback(() => {
