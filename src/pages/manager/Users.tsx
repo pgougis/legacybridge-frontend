@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { usersApi, roleNum } from '../../api/users'
+import { usersApi } from '../../api/users'
 import { useAuth } from '../../ctx/auth'
 import type { UserDto, UserRole } from '../../api/types'
 import Usage from '../shared/Usage'
@@ -41,7 +41,7 @@ export default function ManagerUsers() {
   async function handleInvite() {
     setErr('')
     try {
-      await usersApi.invite({ email: form.email, firstName: form.firstName, lastName: form.lastName, role: roleNum(form.role), customerId: user!.customerId })
+      await usersApi.invite({ email: form.email, firstName: form.firstName, lastName: form.lastName, role: form.role, customerId: user!.customerId })
       setModal(null); load()
     } catch (e: unknown) {
       try { setErr(JSON.parse((e as Error).message)?.detail || 'Invitation failed.') }
@@ -56,7 +56,7 @@ export default function ManagerUsers() {
     try {
       await usersApi.update(editing.id, {
         email: form.email, firstName: form.firstName,
-        lastName: form.lastName, role: roleNum(form.role),
+        lastName: form.lastName, role: form.role,
         apiCallDailyLimit: isNaN(limit as number) ? undefined : limit,
       })
       setModal(null); load()

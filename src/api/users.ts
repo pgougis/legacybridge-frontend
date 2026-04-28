@@ -1,9 +1,9 @@
 import { api } from './client'
 import type { UserDto, UserRole } from './types'
 
-interface CreateUser  { email: string; password: string; firstName: string; lastName: string; role: number; customerId: string }
-interface InviteUser  { email: string; firstName: string; lastName: string; role: number; customerId: string }
-interface UpdateUser { email: string; firstName: string; lastName: string; role: number; apiCallDailyLimit?: number }
+interface CreateUser  { email: string; password: string; firstName: string; lastName: string; role: UserRole; customerId: string }
+interface InviteUser  { email: string; firstName: string; lastName: string; role: UserRole; customerId: string }
+interface UpdateUser { email: string; firstName: string; lastName: string; role: UserRole; apiCallDailyLimit?: number }
 
 const roleToNum: Record<UserRole, number> = { Admin: 1, Member: 2, Viewer: 3, Manager: 4 }
 export const roleNum = (r: UserRole) => roleToNum[r]

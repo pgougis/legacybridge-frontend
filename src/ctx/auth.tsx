@@ -105,11 +105,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export const useAuth = () => useContext(Ctx)
 
-export function homeFor(role: UserRole): string {
+export function homeFor(role: UserRole | string): string {
   switch (role) {
     case 'Admin':   return '/admin/dashboard'
     case 'Manager': return '/manager/dashboard'
     case 'Member':  return '/member/sources'
     case 'Viewer':  return '/viewer'
+    default:        return '/login'
   }
 }

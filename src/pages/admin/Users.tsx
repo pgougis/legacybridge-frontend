@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { usersApi, roleNum } from '../../api/users'
+import { usersApi } from '../../api/users'
 import { customersApi } from '../../api/customers'
 import { useAuth, homeFor } from '../../ctx/auth'
 import type { UserDto, UserRole, Customer } from '../../api/types'
@@ -54,7 +54,7 @@ export default function AdminUsers() {
   async function handleInvite() {
     setErr('')
     try {
-      await usersApi.invite({ email: form.email, firstName: form.firstName, lastName: form.lastName, role: roleNum(form.role), customerId: form.customerId })
+      await usersApi.invite({ email: form.email, firstName: form.firstName, lastName: form.lastName, role: form.role, customerId: form.customerId })
       setModal(null); load()
     } catch (e: unknown) {
       try { setErr(JSON.parse((e as Error).message)?.detail || 'Invitation failed.') }
@@ -67,11 +67,11 @@ export default function AdminUsers() {
     const limit = form.dailyLimit !== '' ? parseInt(form.dailyLimit, 10) : undefined
     try {
       if (modal === 'create') {
-        await usersApi.create({ ...form, role: roleNum(form.role), password: form.password })
+        await usersApi.create({ ...form, role: form.role, password: form.password })
       } else if (editing) {
         await usersApi.update(editing.id, {
           email: form.email, firstName: form.firstName,
-          lastName: form.lastName, role: roleNum(form.role),
+          lastName: form.lastName, role: form.role,
           apiCallDailyLimit: isNaN(limit as number) ? undefined : limit,
         })
       }
@@ -101,15 +101,9 @@ export default function AdminUsers() {
 
   async function handleImpersonate(u: UserDto) {
     try {
-      console.log('[impersonate] u.role=', u.role, 'typeof=', typeof u.role)
       const role = await impersonate(u.id, u.email)
-      console.log('[impersonate] returned role=', role, 'typeof=', typeof role)
-      const dest = homeFor(role)
-      console.log('[impersonate] dest=', dest)
-      if (!dest) { alert('homeFor returned undefined for role: ' + String(role)); return }
-      window.location.href = dest
+      window.location.href = homeFor(role)
     } catch (err) {
-      console.error('Impersonate error:', err)
       alert('Impersonation failed: ' + (err instanceof Error ? err.message : String(err)))
     }
   }
