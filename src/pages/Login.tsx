@@ -38,7 +38,7 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-box">
-        <div className="login-logo">⚡ LegacyBridge</div>
+        <div className="login-logo">⚡ Legacy<span className="accent">Bridge</span></div>
         <div className="login-sub">Sign in to your account</div>
 
         {error && <div className="login-error">{error}</div>}

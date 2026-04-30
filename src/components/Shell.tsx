@@ -185,7 +185,7 @@ export default function Shell() {
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-name">
-            <span>⚡</span> LegacyBridge
+            <span>⚡</span> Legacy<span className="accent">Bridge</span>
           </div>
           <div className="brand-sub">Legacy Integration Platform</div>
           <span className={`role-badge ${user.role.toLowerCase()}`}>{user.role}</span>

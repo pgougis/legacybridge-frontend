@@ -32,7 +32,7 @@ export default function AcceptInvite() {
   if (!token) return (
     <div className="login-page">
       <div className="login-box">
-        <div className="login-logo">⚡ LegacyBridge</div>
+        <div className="login-logo">⚡ Legacy<span className="accent">Bridge</span></div>
         <p style={{ color: 'var(--text-2)', textAlign: 'center' }}>Invalid invitation link.</p>
       </div>
     </div>
@@ -41,7 +41,7 @@ export default function AcceptInvite() {
   return (
     <div className="login-page">
       <div className="login-box">
-        <div className="login-logo">⚡ LegacyBridge</div>
+        <div className="login-logo">⚡ Legacy<span className="accent">Bridge</span></div>
         <div className="login-sub">Welcome — set your password</div>
 
         {done ? (

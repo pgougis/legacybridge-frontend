@@ -32,7 +32,7 @@ export default function ResetPassword() {
   if (!token) return (
     <div className="login-page">
       <div className="login-box">
-        <div className="login-logo">⚡ LegacyBridge</div>
+        <div className="login-logo">⚡ Legacy<span className="accent">Bridge</span></div>
         <p style={{ color: 'var(--text-2)', textAlign: 'center' }}>Invalid link.</p>
         <div style={{ textAlign: 'center' }}><Link to="/login">Back to sign in</Link></div>
       </div>
@@ -42,7 +42,7 @@ export default function ResetPassword() {
   return (
     <div className="login-page">
       <div className="login-box">
-        <div className="login-logo">⚡ LegacyBridge</div>
+        <div className="login-logo">⚡ Legacy<span className="accent">Bridge</span></div>
         <div className="login-sub">Set a new password</div>
 
         {done ? (
