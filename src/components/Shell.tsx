@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../ctx/auth'
 import { usersApi } from '../api/users'
 import { customersApi } from '../api/customers'
+import { chatApi } from '../api/chat'
 import { INACTIVITY_MS } from '../config'
 
-interface NavItem { to: string; icon: string; label: string; color?: string; href?: string; onClick?: () => void }
+interface NavItem { to: string; icon: string; label: string; color?: string; href?: string; onClick?: () => void; badge?: number }
 
 const adminNav = (): NavItem[] => [
   { to: '/admin/dashboard',  icon: '◉',  label: 'Dashboard' },
@@ -15,8 +16,9 @@ const adminNav = (): NavItem[] => [
   { to: '/admin/plans',      icon: '📋', label: 'Access Plans' },
   { to: '/admin/testbench',  icon: '⚗',  label: 'Test Bench', color: 'orange' },
   { to: '/admin/usage',      icon: '📊', label: 'Usage' },
-  { to: '/admin/logs',  icon: '⚠', label: 'API Error Logs' },
-  { to: '/admin/audit', icon: '🔍', label: 'Audit Trail' },
+  { to: '/admin/logs',       icon: '⚠', label: 'API Error Logs' },
+  { to: '/admin/audit',      icon: '🔍', label: 'Audit Trail' },
+  { to: '/admin/chat',       icon: '💬', label: 'Messages' },
   { to: '', href: import.meta.env.VITE_SWAGGER_URL as string || '/swagger', icon: '📖', label: 'Swagger API' },
 ]
 
@@ -27,15 +29,16 @@ const managerNav = (): NavItem[] => [
   { to: '/manager/plans',     icon: '📋', label: 'Access Plans' },
   { to: '/manager/testbench', icon: '⚗',  label: 'Test Bench', color: 'orange' },
   { to: '/manager/call',      icon: '⚡', label: 'Call Legacy', color: 'blue' },
-  { to: '/manager/chat',      icon: '🤖', label: 'Assistant IA' },
+  { to: '/manager/chat',      icon: '💬', label: 'Messages' },
   { to: '/manager/usage',     icon: '📊', label: 'My Usage' },
-  { to: '/manager/logs', icon: '⚠', label: 'API Error Logs' },
+  { to: '/manager/logs',      icon: '⚠', label: 'API Error Logs' },
 ]
 
-const memberNav: NavItem[] = [
+const memberNav = (): NavItem[] => [
   { to: '/member/sources',    icon: '🔌', label: 'My Sources' },
   { to: '/member/plans',      icon: '📋', label: 'My Plans' },
   { to: '/member/call',       icon: '⚡', label: 'Call Legacy', color: 'green' },
+  { to: '/member/chat',       icon: '💬', label: 'Messages' },
   { to: '/member/usage',      icon: '📊', label: 'My Usage' },
 ]
 
@@ -43,11 +46,20 @@ const viewerNav: NavItem[] = [
   { to: '/viewer/usage',      icon: '📊', label: 'My Usage' },
 ]
 
-function navFor(role: string): NavItem[] {
+function chatRoute(role: string) {
+  if (role === 'Admin')   return '/admin/chat'
+  if (role === 'Manager') return '/manager/chat'
+  if (role === 'Member')  return '/member/chat'
+  return null
+}
+
+function navFor(role: string, unread: number): NavItem[] {
+  const inject = (items: NavItem[]) =>
+    items.map(i => i.icon === '💬' ? { ...i, badge: unread || undefined } : i)
   switch (role) {
-    case 'Admin':   return adminNav()
-    case 'Manager': return managerNav()
-    case 'Member':  return memberNav
+    case 'Admin':   return inject(adminNav())
+    case 'Manager': return inject(managerNav())
+    case 'Member':  return inject(memberNav())
     default:        return viewerNav
   }
 }
@@ -63,6 +75,8 @@ export default function Shell() {
   const [apiCallCount, setApiCallCount]       = useState<number | null>(null)
   const [apiCallDailyLimit, setApiCallDailyLimit] = useState<number | null>(null)
   const [customerName, setCustomerName]       = useState<string>('')
+  const [unreadMessages, setUnreadMessages]   = useState(0)
+  const unreadTimerRef                        = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     if (!user) return
@@ -72,6 +86,23 @@ export default function Shell() {
     customersApi.getById(user.customerId)
       .then(c => setCustomerName(c.name))
       .catch(() => {})
+  }, [user])
+
+  // Polling non-lus toutes les 15s pour le badge sidebar
+  useEffect(() => {
+    if (!user || !chatRoute(user.role)) return
+
+    const poll = async () => {
+      try {
+        const contacts = await chatApi.getContacts()
+        const total = (contacts ?? []).reduce((s, c) => s + c.unreadCount, 0)
+        setUnreadMessages(total)
+      } catch { /* ignore */ }
+    }
+
+    poll()
+    unreadTimerRef.current = setInterval(poll, 15000)
+    return () => { if (unreadTimerRef.current) clearInterval(unreadTimerRef.current) }
   }, [user])
 
   // Keep Render backend alive — ping prod once per day while tab is open
@@ -121,7 +152,7 @@ export default function Shell() {
 
   if (!user) return null
 
-  const nav = navFor(user.role)
+  const nav = navFor(user.role, unreadMessages)
   const initials = user.email.slice(0, 2).toUpperCase()
 
   function handleLogout() {
@@ -181,6 +212,7 @@ export default function Shell() {
                 >
                   <span className="nav-icon">{item.icon}</span>
                   {item.label}
+                  {item.badge ? <span className="chat-badge nav-badge">{item.badge}</span> : null}
                 </NavLink>
           ))}
         </nav>

@@ -16,6 +16,8 @@ import ManagerSources   from './pages/manager/Sources'
 import ManagerPlans     from './pages/manager/Plans'
 import ManagerCall      from './pages/manager/Call'
 import ManagerChat      from './pages/manager/Chat'
+import AdminChat        from './pages/admin/Chat'
+import MemberChat       from './pages/member/Chat'
 import MemberSources    from './pages/member/Sources'
 import MemberCall       from './pages/member/Call'
 import MemberPlans      from './pages/member/Plans'
@@ -66,6 +68,7 @@ export default function App() {
         <Route path="testbench"  element={<TestBench />} />
         <Route path="logs"       element={<Logs selectable />} />
         <Route path="audit"      element={<AdminAudit />} />
+        <Route path="chat"       element={<AdminChat />} />
         <Route path="usage"      element={<UsageSelectable />} />
         <Route index element={<Navigate to="dashboard" replace />} />
       </Route>
@@ -86,6 +89,7 @@ export default function App() {
 
       {/* Member */}
       <Route path="/member" element={<RequireAuth roles={['Member']}><Shell /></RequireAuth>}>
+        <Route path="chat"       element={<MemberChat />} />
         <Route path="sources"    element={<MemberSources />} />
         <Route path="call"       element={<MemberCall />} />
         <Route path="plans"      element={<MemberPlans />} />
