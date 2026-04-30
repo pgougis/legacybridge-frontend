@@ -16,6 +16,7 @@ export default defineConfig({
       '/access-plans':   { target: API, changeOrigin: true },
       '/api-logs':       { target: API, changeOrigin: true },
       '/swagger':        { target: API, changeOrigin: true },
+      '/chat':           { target: API, changeOrigin: true },
     },
   },
 })

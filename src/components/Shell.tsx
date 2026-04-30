@@ -27,6 +27,7 @@ const managerNav = (): NavItem[] => [
   { to: '/manager/plans',     icon: '📋', label: 'Access Plans' },
   { to: '/manager/testbench', icon: '⚗',  label: 'Test Bench', color: 'orange' },
   { to: '/manager/call',      icon: '⚡', label: 'Call Legacy', color: 'blue' },
+  { to: '/manager/chat',      icon: '🤖', label: 'Assistant IA' },
   { to: '/manager/usage',     icon: '📊', label: 'My Usage' },
   { to: '/manager/logs', icon: '⚠', label: 'API Error Logs' },
 ]

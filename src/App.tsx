@@ -15,6 +15,7 @@ import ManagerUsers     from './pages/manager/Users'
 import ManagerSources   from './pages/manager/Sources'
 import ManagerPlans     from './pages/manager/Plans'
 import ManagerCall      from './pages/manager/Call'
+import ManagerChat      from './pages/manager/Chat'
 import MemberSources    from './pages/member/Sources'
 import MemberCall       from './pages/member/Call'
 import MemberPlans      from './pages/member/Plans'
@@ -78,6 +79,7 @@ export default function App() {
         <Route path="testbench"  element={<TestBench />} />
         <Route path="logs"       element={<Logs selectable />} />
         <Route path="call"       element={<ManagerCall />} />
+        <Route path="chat"       element={<ManagerChat />} />
         <Route path="usage"      element={<UsageSelectable />} />
         <Route index element={<Navigate to="dashboard" replace />} />
       </Route>
