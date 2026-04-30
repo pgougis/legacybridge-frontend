@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { sourcesApi, systemTypeLabels } from '../../api/sources'
 import type { SourceAssignedUser } from '../../api/sources'
 import { useAuth } from '../../ctx/auth'
+import { api } from '../../api/client'
 import type { LegacySource } from '../../api/types'
 export default function ManagerSources() {
   const { user } = useAuth()
@@ -13,6 +14,16 @@ export default function ManagerSources() {
   const [form, setForm]         = useState({ systemType: 1, systemUrl: '' })
   const [authForm, setAuthForm] = useState({ authType: 'Basic', username: '', password: '' })
   const [err, setErr]           = useState('')
+  const [ipModal, setIpModal]   = useState(false)
+  const [outboundIp, setOutboundIp] = useState<string | null>(null)
+
+  async function showIp() {
+    setIpModal(true)
+    if (!outboundIp) {
+      const res = await api.get<{ ip: string }>('/system/outbound-ip')
+      setOutboundIp(res.ip)
+    }
+  }
 
   function load() { sourcesApi.getAll().then(setRows).catch(() => {}) }
   useEffect(load, [])
@@ -72,7 +83,10 @@ export default function ManagerSources() {
     <div className="page">
       <div className="page-hd">
         <div><h1>Legacy Sources</h1><p>Your registered legacy systems</p></div>
-        <button className="btn btn-primary" onClick={openCreate}>+ New Source</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-outline" onClick={showIp}>🌐 Firewall IP</button>
+          <button className="btn btn-primary" onClick={openCreate}>+ New Source</button>
+        </div>
       </div>
 
       <div className="card">
@@ -206,6 +220,41 @@ export default function ManagerSources() {
           </div>
         </div>
       )}
+      {ipModal && (
+        <div className="modal-backdrop" onClick={() => setIpModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className="modal-head">
+              <h2>🌐 Outbound IP — Firewall Whitelist</h2>
+              <button className="modal-close" onClick={() => setIpModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 13, color: 'var(--text-sub)', marginBottom: 16 }}>
+                Add this IP address to your client's firewall to allow LegacyBridge to reach the legacy system.
+              </p>
+              {outboundIp ? (
+                <div style={{
+                  background: 'var(--bg)', border: '1px solid var(--border)',
+                  borderLeft: '4px solid var(--accent)',
+                  padding: '14px 18px', fontFamily: 'var(--font-mono, monospace)',
+                  fontSize: 18, fontWeight: 700, letterSpacing: 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                }}>
+                  <span>{outboundIp}</span>
+                  <button className="btn btn-outline btn-sm" onClick={() => navigator.clipboard.writeText(outboundIp)}>
+                    Copy
+                  </button>
+                </div>
+              ) : (
+                <div className="spinner">Fetching IP…</div>
+              )}
+              <p style={{ fontSize: 11, color: 'var(--text-sub)', marginTop: 12 }}>
+                ⚠ This IP may change on Render free tier restarts. Contact support for a static IP option.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+
