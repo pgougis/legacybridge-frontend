@@ -8,6 +8,7 @@ const ACTION_LABELS: Record<string, { label: string; color: string }> = {
   SourceDeleted:{ label: 'Source Deleted', color: 'red'    },
   Impersonated: { label: 'Impersonated',   color: 'purple' },
   UserInvited:  { label: 'User Invited',   color: 'green'  },
+  SystemError:  { label: '⚠ System Error', color: 'red'    },
 }
 
 const PAGE_SIZE = 25
