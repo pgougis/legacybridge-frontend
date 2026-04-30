@@ -84,7 +84,7 @@ nav.sidebar-nav { flex: 1; padding: 8px 0; overflow-y: auto; }
 .nav-group { font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: .8px; padding: 10px 16px 4px; }
 .nav-item {
   display: flex; align-items: center; gap: 9px; padding: 8px 16px;
-  color: var(--text-sub); cursor: pointer; border-left: 3px solid transparent;
+  color: #1a2535; cursor: pointer; border-left: 3px solid transparent;
   text-decoration: none; transition: background .1s, color .1s;
 }
 .nav-item:hover { background: var(--gray-lt); color: var(--text); }
