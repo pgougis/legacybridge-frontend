@@ -17,7 +17,7 @@ const adminNav = (): NavItem[] => [
   { to: '/admin/usage',      icon: '📊', label: 'Usage' },
   { to: '/admin/logs',  icon: '⚠', label: 'API Error Logs' },
   { to: '/admin/audit', icon: '🔍', label: 'Audit Trail' },
-  { to: '', href: '/swagger', icon: '📖', label: 'Swagger API' },
+  { to: '', href: import.meta.env.VITE_SWAGGER_URL as string || '/swagger', icon: '📖', label: 'Swagger API' },
 ]
 
 const managerNav = (): NavItem[] => [
