@@ -57,7 +57,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 
 .sidebar {
   width: var(--sidebar-w); min-width: var(--sidebar-w); height: 100%;
-  background: var(--white); border-right: 1px solid var(--border);
+  background: #c8d0da; border-right: 1px solid #b8c2cc;
   display: flex; flex-direction: column; overflow: hidden; position: sticky; top: 0;
 }
 .main { flex: 1; overflow-y: auto; }
