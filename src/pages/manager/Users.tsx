@@ -90,7 +90,8 @@ export default function ManagerUsers() {
             <input placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
         </div>
-        <table>
+        <div style={{ overflowX: 'auto' }}>
+        <table style={{ minWidth: 820 }}>
           <thead>
             <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>API Calls</th><th>Daily Limit</th><th>Created</th><th></th></tr>
           </thead>
@@ -125,6 +126,7 @@ export default function ManagerUsers() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Invite modal */}

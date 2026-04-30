@@ -128,7 +128,8 @@ export default function AdminUsers() {
             <input placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
         </div>
-        <table>
+        <div style={{ overflowX: 'auto' }}>
+        <table style={{ minWidth: 900 }}>
           <thead>
             <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Customer</th><th>API Calls</th><th>Daily Limit</th><th>Created</th><th></th></tr>
           </thead>
@@ -170,6 +171,7 @@ export default function AdminUsers() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {modal === 'invite' && (
