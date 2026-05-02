@@ -11,7 +11,7 @@ export default function ManagerSources() {
   const [modal, setModal]       = useState<'create' | 'edit' | 'auth' | 'users' | null>(null)
   const [assignedUsers, setAssignedUsers] = useState<SourceAssignedUser[]>([])
   const [editing, setEditing]   = useState<LegacySource | null>(null)
-  const [form, setForm]         = useState({ systemType: 1, systemUrl: '' })
+  const [form, setForm]         = useState({ systemType: 1, systemUrl: '', isSoapAllowed: true })
   const [authForm, setAuthForm] = useState({ authType: 'Basic', username: '', password: '' })
   const [err, setErr]           = useState('')
   const [ipModal, setIpModal]   = useState(false)
@@ -33,10 +33,10 @@ export default function ManagerSources() {
   )
 
   function openCreate() {
-    setForm({ systemType: 1, systemUrl: '' }); setEditing(null); setErr(''); setModal('create')
+    setForm({ systemType: 1, systemUrl: '', isSoapAllowed: true }); setEditing(null); setErr(''); setModal('create')
   }
   function openEdit(s: LegacySource) {
-    setForm({ systemType: s.systemType as unknown as number, systemUrl: s.systemUrl })
+    setForm({ systemType: s.systemType as unknown as number, systemUrl: s.systemUrl, isSoapAllowed: s.isSoapAllowed })
     setEditing(s); setErr(''); setModal('edit')
   }
   function openAuth(s: LegacySource) {
@@ -49,7 +49,7 @@ export default function ManagerSources() {
       if (modal === 'create') {
         await sourcesApi.create({ ...form, customerId: user!.customerId })
       } else if (editing) {
-        await sourcesApi.update(editing.id, { systemType: form.systemType, systemUrl: form.systemUrl })
+        await sourcesApi.update(editing.id, { systemType: form.systemType, systemUrl: form.systemUrl, isSoapAllowed: form.isSoapAllowed })
       }
       setModal(null); load()
     } catch { setErr('Save failed.') }
