@@ -19,4 +19,5 @@ export const usersApi = {
     api.put<null>(`/users/${id}/password`, { id, newPassword }),
   delete: (id: string) => api.delete<null>(`/users/${id}`),
   resetUsage: (id: string) => api.post<null>(`/users/${id}/usage/reset`, {}),
+  confirmEmail: (id: string) => api.post<null>(`/users/${id}/confirm`, {}),
 }

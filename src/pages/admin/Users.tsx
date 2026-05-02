@@ -88,6 +88,10 @@ export default function AdminUsers() {
     catch { setErr('Password change failed.') }
   }
 
+  async function handleConfirm(id: string) {
+    try { await usersApi.confirmEmail(id); load() } catch { alert('Confirm failed.') }
+  }
+
   async function handleDelete(id: string) {
     if (!confirm('Delete this user?')) return
     try { await usersApi.delete(id); load() } catch { alert('Delete failed.') }
@@ -149,6 +153,9 @@ export default function AdminUsers() {
                 <td className="sub">{new Date(u.createdAt).toLocaleDateString()}</td>
                 <td>
                   <div className="actions">
+                    {!u.emailConfirmed && (
+                      <button className="btn btn-outline btn-sm" style={{ color: 'var(--green)' }} onClick={() => handleConfirm(u.id)}>✓ Confirm</button>
+                    )}
                     <button className="btn btn-outline btn-sm" onClick={() => openEdit(u)}>Edit</button>
                     <button className="btn btn-outline btn-sm" onClick={() => { setEditing(u); setPwd(''); setErr(''); setModal('pwd') }}>Pwd</button>
                     <button className="btn btn-outline btn-sm" style={{ color: 'var(--purple)' }} onClick={() => { setEditing(u); setModal('usage') }}>📊</button>
