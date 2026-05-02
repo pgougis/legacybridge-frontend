@@ -9,7 +9,7 @@ export default function AdminSources() {
   const [search, setSearch]       = useState('')
   const [modal, setModal]         = useState<'create' | 'edit' | 'auth' | null>(null)
   const [editing, setEditing]     = useState<LegacySource | null>(null)
-  const [form, setForm]           = useState({ systemType: 1, systemUrl: '', customerId: '' })
+  const [form, setForm]           = useState({ systemType: 1, systemUrl: '', customerId: '', isSoapAllowed: true })
   const [authForm, setAuthForm]   = useState({ authType: 'Basic', username: '', password: '' })
   const [err, setErr]             = useState('')
   const [ipModal, setIpModal]     = useState(false)
@@ -36,11 +36,11 @@ export default function AdminSources() {
   )
 
   function openCreate() {
-    setForm({ systemType: 1, systemUrl: '', customerId: customers[0]?.id ?? '' })
+    setForm({ systemType: 1, systemUrl: '', customerId: customers[0]?.id ?? '', isSoapAllowed: true })
     setEditing(null); setErr(''); setModal('create')
   }
   function openEdit(s: LegacySource) {
-    setForm({ systemType: s.systemType as unknown as number, systemUrl: s.systemUrl, customerId: s.customerId })
+    setForm({ systemType: s.systemType as unknown as number, systemUrl: s.systemUrl, customerId: s.customerId, isSoapAllowed: s.isSoapAllowed })
     setEditing(s); setErr(''); setModal('edit')
   }
   function openAuth(s: LegacySource) {
@@ -55,7 +55,7 @@ export default function AdminSources() {
       if (modal === 'create') {
         await sourcesApi.create({ ...form })
       } else if (editing) {
-        await sourcesApi.update(editing.id, { systemType: form.systemType, systemUrl: form.systemUrl })
+        await sourcesApi.update(editing.id, { systemType: form.systemType, systemUrl: form.systemUrl, isSoapAllowed: form.isSoapAllowed })
       }
       setModal(null); load()
     } catch { setErr('Save failed.') }
@@ -157,6 +157,11 @@ export default function AdminSources() {
                     </select>
                   </div>
                 )}
+              </div>
+              <div className="form-field" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <input type="checkbox" id="isSoapAllowed" checked={form.isSoapAllowed}
+                  onChange={e => setForm(f => ({ ...f, isSoapAllowed: e.target.checked }))} />
+                <label htmlFor="isSoapAllowed" style={{ margin: 0 }}>Autoriser les appels SOAP depuis cette source</label>
               </div>
             </div>
             <div className="modal-footer">

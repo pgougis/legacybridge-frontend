@@ -13,9 +13,9 @@ export const sourcesApi = {
   getById:      (id: string) => api.get<LegacySource>(`/legacy-sources/${id}`),
   getOperations:        (id: string) => api.get<WsdlOperation[]>(`/legacy-sources/${id}/operations`),
   getAllowedOperations: (id: string) => api.get<WsdlOperation[]>(`/legacy-sources/${id}/allowed-operations`),
-  create: (body: { systemType: number; systemUrl: string; swaggerUrl?: string; customerId: string }) =>
+  create: (body: { systemType: number; systemUrl: string; swaggerUrl?: string; customerId: string; isSoapAllowed: boolean }) =>
     api.post<LegacySource>('/legacy-sources', body),
-  update: (id: string, body: { systemType: number; systemUrl: string; swaggerUrl?: string }) =>
+  update: (id: string, body: { systemType: number; systemUrl: string; swaggerUrl?: string; isSoapAllowed: boolean }) =>
     api.put<LegacySource>(`/legacy-sources/${id}`, { id, ...body }),
   upsertAuth: (id: string, body: Record<string, unknown>) =>
     api.put<unknown>(`/legacy-sources/${id}/auth`, { sourceId: id, ...body }),

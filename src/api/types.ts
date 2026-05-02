@@ -47,6 +47,7 @@ export interface LegacySource {
   createdAt: string
   updatedAt?: string
   authConfig?: LegacyAuthConfig
+  isSoapAllowed: boolean
 }
 
 export interface AccessRule {
