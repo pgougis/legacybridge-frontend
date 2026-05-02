@@ -75,7 +75,8 @@ export default function ManagerSources() {
 
   function openSwagger(id: string) {
     const token = localStorage.getItem('lb_token') ?? ''
-    const url = encodeURIComponent(`/legacy/discovery/${id}/swagger.json`)
+    const apiBase = import.meta.env.VITE_API_URL || ''
+    const url = encodeURIComponent(`${apiBase}/legacy/discovery/${id}/swagger.json`)
     window.open(`/lb-explorer.html?url=${url}&token=${encodeURIComponent(token)}`, '_blank')
   }
 
