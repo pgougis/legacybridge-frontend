@@ -15,6 +15,7 @@ import ManagerUsers     from './pages/manager/Users'
 import ManagerSources   from './pages/manager/Sources'
 import ManagerPlans     from './pages/manager/Plans'
 import ManagerCall      from './pages/manager/Call'
+import AdminCall        from './pages/manager/Call'
 import ManagerChat      from './pages/manager/Chat'
 import AdminChat        from './pages/admin/Chat'
 import MemberChat       from './pages/member/Chat'
@@ -65,6 +66,7 @@ export default function App() {
         <Route path="users"      element={<AdminUsers />} />
         <Route path="sources"    element={<AdminSources />} />
         <Route path="plans"      element={<AdminPlans />} />
+        <Route path="call"       element={<AdminCall />} />
         <Route path="testbench"  element={<TestBench />} />
         <Route path="logs"       element={<Logs selectable />} />
         <Route path="audit"      element={<AdminAudit />} />
