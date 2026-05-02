@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { LegacySystemType } from '../../api/types'
 
-// ─── Request format builders per system type ──────────────────────────────────
+// ─── SOAP request builders ────────────────────────────────────────────────────
 
 const oeReq = (method: string, fields: string) =>
 `<?xml version="1.0" encoding="utf-8"?>
@@ -29,15 +29,9 @@ ${fields.split('\n').map(l => '      ' + l).join('\n')}
 
 const asmxReq = (method: string, fields: string) => {
   const jsonFields = fields
-    .split('\n')
-    .map(l => l.trim())
-    .filter(l => l.match(/<[^/][^>]*>[^<]+<\/[^>]+>/))
-    .map(l => {
-      const m = l.match(/<([^>]+)>([^<]+)<\//)
-      return m ? `  "${m[1]}": "${m[2]}"` : null
-    })
-    .filter(Boolean)
-    .join(',\n')
+    .split('\n').map(l => l.trim()).filter(l => l.match(/<[^/][^>]*>[^<]+<\/[^>]+>/))
+    .map(l => { const m = l.match(/<([^>]+)>([^<]+)<\//); return m ? `  "${m[1]}": "${m[2]}"` : null })
+    .filter(Boolean).join(',\n')
   return `POST /${method} HTTP/1.1\nContent-Type: application/json\n\n{\n${jsonFields}\n}`
 }
 
@@ -55,8 +49,90 @@ ${fields.split('\n').map(l => '        ' + l.trim().replace(/^<P-/, '<').replace
   </soapenv:Body>
 </soapenv:Envelope>`
 
-const oeFault = (code: string, msg: string, detail: string) =>
+function buildSoapRequest(method: string, fields: string, systemType: LegacySystemType): string {
+  switch (systemType) {
+    case 'OpenEdgeSoap': return oeReq(method, fields)
+    case 'GenericSoap':  return genericSoapReq(method, fields)
+    case 'AsmxDotNet':   return asmxReq(method, fields)
+    case 'OracleSoap':   return oracleSoapReq(method, fields)
+  }
+}
+
+// ─── JSON request builder (Client → LegacyBridge) ────────────────────────────
+
+function buildJsonRequest(method: string, xmlFields: string): string {
+  const body: Record<string, string> = {}
+  for (const line of xmlFields.split('\n')) {
+    const m = line.trim().match(/<([^>]+)>([^<]*)<\//)
+    if (m) body[m[1]] = m[2]
+  }
+  return `POST /legacy-sources/{sourceId}/${method}
+Content-Type: application/json
+Authorization: Bearer {token}
+
+${JSON.stringify(body, null, 2)}`
+}
+
+// ─── SOAP response builders (Legacy → LegacyBridge) ──────────────────────────
+
+const oeResp = (method: string, fields: string) =>
 `<?xml version="1.0" encoding="utf-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
+  <soapenv:Body>
+    <${method}Response>
+${fields.split('\n').map(l => '      ' + l).join('\n')}
+    </${method}Response>
+  </soapenv:Body>
+</soapenv:Envelope>`
+
+function buildNominalSoapResponse(method: string, systemType: LegacySystemType): string {
+  switch (systemType) {
+    case 'OpenEdgeSoap':
+      return oeResp(method,
+        '<P-RETOUR>OK</P-RETOUR>\n' +
+        `      <P-METHOD>${method}</P-METHOD>\n` +
+        '      <P-DATA></P-DATA>')
+    case 'GenericSoap':
+      return `<?xml version="1.0" encoding="utf-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
+  <soapenv:Body>
+    <${method}Response xmlns="urn:service">
+      <status>SUCCESS</status>
+      <code>0</code>
+      <data/>
+    </${method}Response>
+  </soapenv:Body>
+</soapenv:Envelope>`
+    case 'AsmxDotNet':
+      return `HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "${method}Result": {
+    "Success": true,
+    "Data": null
+  }
+}`
+    case 'OracleSoap':
+      return `<?xml version="1.0" encoding="utf-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
+  <soapenv:Body>
+    <${method}Response xmlns="urn:oracle:bpel:services">
+      <OutputParameters>
+        <status>S</status>
+        <statusCode>0</statusCode>
+        <message>OK</message>
+      </OutputParameters>
+    </${method}Response>
+  </soapenv:Body>
+</soapenv:Envelope>`
+  }
+}
+
+function buildFaultSoapResponse(code: string, msg: string, detail: string, systemType: LegacySystemType): string {
+  switch (systemType) {
+    case 'OpenEdgeSoap':
+      return `<?xml version="1.0" encoding="utf-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
   <soapenv:Body>
     <soapenv:Fault>
@@ -70,9 +146,8 @@ const oeFault = (code: string, msg: string, detail: string) =>
     </soapenv:Fault>
   </soapenv:Body>
 </soapenv:Envelope>`
-
-const genericFault = (code: string, msg: string) =>
-`<?xml version="1.0" encoding="utf-8"?>
+    case 'GenericSoap':
+      return `<?xml version="1.0" encoding="utf-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
   <soapenv:Body>
     <soapenv:Fault>
@@ -82,12 +157,10 @@ const genericFault = (code: string, msg: string) =>
     </soapenv:Fault>
   </soapenv:Body>
 </soapenv:Envelope>`
-
-const asmxError = (code: string, msg: string) =>
-`HTTP/1.1 400 Bad Request\nContent-Type: application/json\n\n{\n  "error": "${code}",\n  "message": "${msg}"\n}`
-
-const oracleFault = (code: string, msg: string) =>
-`<?xml version="1.0" encoding="utf-8"?>
+    case 'AsmxDotNet':
+      return `HTTP/1.1 400 Bad Request\nContent-Type: application/json\n\n{\n  "error": "${code}",\n  "message": "${msg}"\n}`
+    case 'OracleSoap':
+      return `<?xml version="1.0" encoding="utf-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
   <soapenv:Body>
     <soapenv:Fault>
@@ -97,62 +170,26 @@ const oracleFault = (code: string, msg: string) =>
     </soapenv:Fault>
   </soapenv:Body>
 </soapenv:Envelope>`
-
-const oeResp = (method: string, fields: string) =>
-`<?xml version="1.0" encoding="utf-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
-  <soapenv:Body>
-    <${method}Response>
-${fields.split('\n').map(l => '      ' + l).join('\n')}
-    </${method}Response>
-  </soapenv:Body>
-</soapenv:Envelope>`
-
-// ─── Build request preview per type ──────────────────────────────────────────
-
-function buildNominalReq(method: string, fields: string, systemType: LegacySystemType): string {
-  switch (systemType) {
-    case 'OpenEdgeSoap': return oeReq(method, fields)
-    case 'GenericSoap':  return genericSoapReq(method, fields)
-    case 'AsmxDotNet':   return asmxReq(method, fields)
-    case 'OracleSoap':   return oracleSoapReq(method, fields)
   }
 }
 
-function buildFaultReq(code: string, msg: string, detail: string, systemType: LegacySystemType): string {
+// ─── JSON response builders (LegacyBridge → Client) ──────────────────────────
+
+function buildNominalJsonResponse(method: string, systemType: LegacySystemType): string {
   switch (systemType) {
-    case 'OpenEdgeSoap': return oeFault(code, msg, detail)
-    case 'GenericSoap':  return genericFault(code, msg)
-    case 'AsmxDotNet':   return asmxError(code, msg)
-    case 'OracleSoap':   return oracleFault(code, msg)
+    case 'OpenEdgeSoap': return prettyJson(JSON.stringify({ 'P-RETOUR': 'OK', 'P-METHOD': method, 'P-DATA': [] }))
+    case 'GenericSoap':  return prettyJson(JSON.stringify({ status: 'SUCCESS', code: 0, data: {} }))
+    case 'AsmxDotNet':   return prettyJson(JSON.stringify({ [`${method}Result`]: { Success: true, Data: null } }))
+    case 'OracleSoap':   return prettyJson(JSON.stringify({ return: { status: 'S', statusCode: '0', message: 'OK' } }))
   }
 }
 
-// ─── Response format builders per system type ────────────────────────────────
-
-function buildNominalResponse(method: string, systemType: LegacySystemType): string {
+function buildFaultJsonResponse(code: string, msg: string, systemType: LegacySystemType): string {
   switch (systemType) {
-    case 'OpenEdgeSoap':
-      return prettyJson(JSON.stringify({ 'P-RETOUR': 'OK', 'P-METHOD': method, 'P-DATA': [] }))
-    case 'GenericSoap':
-      return prettyJson(JSON.stringify({ status: 'SUCCESS', code: 0, data: {} }))
-    case 'AsmxDotNet':
-      return prettyJson(JSON.stringify({ [`${method}Result`]: { Success: true, Data: null } }))
-    case 'OracleSoap':
-      return prettyJson(JSON.stringify({ return: { status: 'S', statusCode: '0', message: 'OK' } }))
-  }
-}
-
-function buildFaultResponse(code: string, msg: string, _detail: string, systemType: LegacySystemType): string {
-  switch (systemType) {
-    case 'OpenEdgeSoap':
-      return prettyJson(JSON.stringify({ 'P-RETOUR': 'KO', 'P-ERROR-CODE': code, 'P-MESSAGE': msg }))
-    case 'GenericSoap':
-      return prettyJson(JSON.stringify({ status: 'ERROR', code, message: msg }))
-    case 'AsmxDotNet':
-      return prettyJson(JSON.stringify({ error: code, message: msg }))
-    case 'OracleSoap':
-      return prettyJson(JSON.stringify({ return: { status: 'E', statusCode: code, message: msg } }))
+    case 'OpenEdgeSoap': return prettyJson(JSON.stringify({ 'P-RETOUR': 'KO', 'P-ERROR-CODE': code, 'P-MESSAGE': msg }))
+    case 'GenericSoap':  return prettyJson(JSON.stringify({ status: 'ERROR', code, message: msg }))
+    case 'AsmxDotNet':   return prettyJson(JSON.stringify({ error: code, message: msg }))
+    case 'OracleSoap':   return prettyJson(JSON.stringify({ return: { status: 'E', statusCode: code, message: msg } }))
   }
 }
 
@@ -276,6 +313,62 @@ function prettyJson(raw: string): string {
   try { return JSON.stringify(JSON.parse(raw), null, 2) } catch { return raw }
 }
 
+// ─── Panel component ──────────────────────────────────────────────────────────
+
+function Panel({
+  step, label, sublabel, content, color, isError,
+}: {
+  step: string; label: string; sublabel: string
+  content: string; color: string; isError?: boolean
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', padding: '12px 16px', minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
+        <span style={{
+          fontSize: 10, fontWeight: 800, letterSpacing: '0.1em',
+          background: color, color: '#fff',
+          padding: '2px 7px', borderRadius: 3, flexShrink: 0,
+        }}>{step}</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          {label}
+        </span>
+        <span style={{ fontSize: 10, color: 'var(--text-sub)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+          {sublabel}
+        </span>
+      </div>
+      <textarea
+        readOnly
+        value={content}
+        style={{
+          flex: 1, minHeight: 280, resize: 'vertical',
+          fontFamily: 'monospace', fontSize: 11,
+          background: isError ? 'var(--bg-error, #fff8f8)' : 'var(--bg-code, #f8f9fb)',
+          border: '1px solid ' + (isError ? color : 'var(--border)'),
+          borderRadius: 4, padding: 8, lineHeight: 1.5,
+          color: 'var(--text)', boxSizing: 'border-box', width: '100%',
+        }}
+      />
+    </div>
+  )
+}
+
+// ─── Arrow indicator ──────────────────────────────────────────────────────────
+
+function FlowArrow({ dir, label }: { dir: '→' | '↓' | '←' | '↑'; label?: string }) {
+  const isHoriz = dir === '→' || dir === '←'
+  return (
+    <div style={{
+      display: 'flex', flexDirection: isHoriz ? 'row' : 'column',
+      alignItems: 'center', justifyContent: 'center',
+      padding: isHoriz ? '0 4px' : '4px 0',
+      gap: 4, color: 'var(--text-sub)', flexShrink: 0,
+    }}>
+      {label && <span style={{ fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-sub)' }}>{label}</span>}
+      <span style={{ fontSize: isHoriz ? 18 : 16, lineHeight: 1 }}>{dir}</span>
+    </div>
+  )
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function TestBench() {
@@ -284,48 +377,55 @@ export default function TestBench() {
   const [methodIdx,  setMethodIdx]  = useState(0)
   const [isFault,    setIsFault]    = useState(false)
 
-  const entity   = ENTITIES[entityKey]
-  const methods  = entity.methods
-  const safeIdx  = Math.min(methodIdx, methods.length - 1)
-  const method   = methods[safeIdx]
+  const entity  = ENTITIES[entityKey]
+  const methods = entity.methods
+  const safeIdx = Math.min(methodIdx, methods.length - 1)
+  const method  = methods[safeIdx]
 
   const isOpenEdge = systemType === 'OpenEdgeSoap'
   const faultLabel = method.faultLabel ?? (isOpenEdge ? 'SOAP Fault' : 'Error')
 
-  let leftContent: string
+  // ① JSON Request — always shows the same fields (request doesn't change on fault)
+  const jsonReq = buildJsonRequest(method.nominal, method.xmlFields)
+
+  // ② SOAP Request — always the nominal request sent to legacy
+  const soapReq = buildSoapRequest(method.nominal, method.xmlFields, systemType)
+
+  // ③ SOAP Response from legacy
+  let soapResp: string
   if (isFault && method.faultIsVariant && isOpenEdge) {
-    leftContent = oeResp(method.nominal, method.xmlVariantFields ?? '')
+    soapResp = oeResp(method.nominal, method.xmlVariantFields ?? '')
   } else if (isFault && method.faultIsVariant) {
-    leftContent = `// ${method.faultLabel} — business variant (not a fault)\n` +
-      buildNominalReq(method.nominal, method.xmlVariantFields ?? '', systemType)
+    soapResp = buildNominalSoapResponse(method.nominal, systemType)
+      + '\n// note: business variant — P-STOCK=0, not a fault'
   } else if (isFault) {
-    leftContent = buildFaultReq(method.faultCode, method.faultMsg, method.faultDetail, systemType)
+    soapResp = buildFaultSoapResponse(method.faultCode, method.faultMsg, method.faultDetail, systemType)
   } else {
-    leftContent = buildNominalReq(method.nominal, method.xmlFields, systemType)
+    soapResp = buildNominalSoapResponse(method.nominal, systemType)
   }
 
-  const rightContent = isFault
-    ? buildFaultResponse(method.faultCode, method.faultMsg, method.faultDetail, systemType)
-    : buildNominalResponse(method.nominal, systemType)
+  // ④ JSON Response to client
+  const jsonResp = isFault
+    ? buildFaultJsonResponse(method.faultCode, method.faultMsg, systemType)
+    : buildNominalJsonResponse(method.nominal, systemType)
 
-  const faultColor = 'var(--red, #c0392b)'
-  const okColor    = 'var(--green, #27ae60)'
-  const xmlColor   = isOpenEdge ? 'var(--blue)' : 'var(--text-sub)'
+  const faultColor  = 'var(--red, #c0392b)'
+  const okColor     = '#27ae60'
+  const blueColor   = 'var(--blue, #2980b9)'
+  const purpleColor = 'var(--purple, #8e44ad)'
 
-  const leftLabel = isFault
-    ? (method.faultIsVariant
-        ? `${method.faultLabel ?? 'Variant'} response`
-        : isOpenEdge ? 'SOAP Fault' : 'Error response')
-    : (isOpenEdge ? 'SOAP Request (illustrative)' : systemType === 'AsmxDotNet' ? 'HTTP Request' : 'SOAP Request (illustrative)')
+  const p3Color = isFault && !method.faultIsVariant ? faultColor : okColor
+  const p4Color = isFault ? faultColor : okColor
 
-  const rightLabel = isFault ? 'JSON error response' : 'JSON response'
+  const soapLabel = systemType === 'AsmxDotNet' ? 'HTTP Request' : 'SOAP Request'
+  const soapRespLabel = systemType === 'AsmxDotNet' ? 'HTTP Response' : (isFault && !method.faultIsVariant ? 'SOAP Fault' : 'SOAP Response')
 
   return (
     <div className="page">
       <div className="page-hd">
         <div>
           <h1>Test Bench</h1>
-          <p>Inspect request formats and simulate legacy responses</p>
+          <p>Visualise the full transformation chain — JSON ↔ SOAP ↔ JSON</p>
         </div>
       </div>
 
@@ -336,51 +436,37 @@ export default function TestBench() {
           display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
           padding: '10px 20px', borderBottom: '1px solid var(--border)',
         }}>
-          {/* System type */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 11, color: 'var(--text-sub)', fontWeight: 700 }}>TYPE</span>
-            <select
-              value={systemType}
-              onChange={e => setSystemType(e.target.value as LegacySystemType)}
-              style={{ fontSize: 13, padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border)' }}
-            >
+            <select value={systemType} onChange={e => setSystemType(e.target.value as LegacySystemType)}
+              style={{ fontSize: 13, padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border)' }}>
               {SYSTEM_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
 
-          {/* Entity */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 11, color: 'var(--text-sub)', fontWeight: 700 }}>ENTITY</span>
-            <select
-              value={entityKey}
-              onChange={e => { setEntityKey(e.target.value); setMethodIdx(0); setIsFault(false) }}
-              style={{ fontSize: 13, padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border)', fontWeight: 600 }}
-            >
+            <select value={entityKey} onChange={e => { setEntityKey(e.target.value); setMethodIdx(0); setIsFault(false) }}
+              style={{ fontSize: 13, padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border)', fontWeight: 600 }}>
               {ENTITY_KEYS.map(k => <option key={k} value={k}>{ENTITIES[k].label}</option>)}
             </select>
           </div>
 
-          {/* Method */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 11, color: 'var(--text-sub)', fontWeight: 700 }}>METHOD</span>
             <div style={{ display: 'flex', gap: 4 }}>
               {methods.map((m, i) => (
-                <button
-                  key={m.label}
-                  onClick={() => { setMethodIdx(i); setIsFault(false) }}
-                  style={{
-                    padding: '3px 10px', borderRadius: 4, fontSize: 12, cursor: 'pointer',
-                    fontWeight: safeIdx === i ? 700 : 400,
-                    background: safeIdx === i ? 'var(--blue)' : 'transparent',
-                    color: safeIdx === i ? '#fff' : 'var(--text)',
-                    border: '1px solid ' + (safeIdx === i ? 'var(--blue)' : 'var(--border)'),
-                  }}
-                >{m.label}</button>
+                <button key={m.label} onClick={() => { setMethodIdx(i); setIsFault(false) }} style={{
+                  padding: '3px 10px', borderRadius: 4, fontSize: 12, cursor: 'pointer',
+                  fontWeight: safeIdx === i ? 700 : 400,
+                  background: safeIdx === i ? 'var(--blue)' : 'transparent',
+                  color: safeIdx === i ? '#fff' : 'var(--text)',
+                  border: '1px solid ' + (safeIdx === i ? 'var(--blue)' : 'var(--border)'),
+                }}>{m.label}</button>
               ))}
             </div>
           </div>
 
-          {/* Fault toggle */}
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', userSelect: 'none', marginLeft: 8 }}>
             <input type="checkbox" checked={isFault} onChange={e => setIsFault(e.target.checked)} />
             <span style={{ fontSize: 12, fontWeight: 600, color: isFault ? faultColor : 'var(--text-sub)' }}>
@@ -393,49 +479,114 @@ export default function TestBench() {
           </span>
         </div>
 
-        {/* Split view */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: 400 }}>
-          <div style={{ padding: '12px 16px', borderRight: '1px solid var(--border)' }}>
-            <div style={{
-              fontSize: 11, fontWeight: 700, marginBottom: 6,
-              color: isFault ? faultColor : xmlColor,
-              textTransform: 'uppercase', letterSpacing: '0.05em',
-            }}>
-              {leftLabel}
-            </div>
-            <textarea
-              readOnly
-              value={leftContent}
-              style={{
-                width: '100%', height: 380, resize: 'vertical',
-                fontFamily: 'monospace', fontSize: 11,
-                background: (isFault && !method.faultIsVariant) ? 'var(--bg-error, #fff8f8)' : 'var(--bg-code, #f8f9fb)',
-                border: '1px solid ' + (isFault ? faultColor : 'var(--border)'),
-                borderRadius: 4, padding: 8, lineHeight: 1.5,
-                color: 'var(--text)', boxSizing: 'border-box',
-              }}
+        {/* Flow legend */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '6px 20px', borderBottom: '1px solid var(--border)',
+          fontSize: 10, color: 'var(--text-sub)', background: 'var(--bg-alt, #f5f6f8)',
+        }}>
+          <span style={{ background: blueColor, color: '#fff', padding: '1px 6px', borderRadius: 2, fontWeight: 700 }}>①</span>
+          <span>Client</span>
+          <span>→→→</span>
+          <span style={{ background: purpleColor, color: '#fff', padding: '1px 6px', borderRadius: 2, fontWeight: 700 }}>②</span>
+          <span>LegacyBridge</span>
+          <span>→→→</span>
+          <span style={{ background: p3Color, color: '#fff', padding: '1px 6px', borderRadius: 2, fontWeight: 700 }}>③</span>
+          <span>Legacy System</span>
+          <span>→→→</span>
+          <span style={{ background: purpleColor, color: '#fff', padding: '1px 6px', borderRadius: 2, fontWeight: 700 }}>Bridge</span>
+          <span>→→→</span>
+          <span style={{ background: p4Color, color: '#fff', padding: '1px 6px', borderRadius: 2, fontWeight: 700 }}>④</span>
+          <span>Client</span>
+          <span style={{ marginLeft: 'auto' }}>
+            {isFault
+              ? <span style={{ color: faultColor, fontWeight: 700 }}>⚠ Error path</span>
+              : <span style={{ color: okColor, fontWeight: 700 }}>✓ Nominal path</span>}
+          </span>
+        </div>
+
+        {/* 2×2 Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 32px 1fr',
+          gridTemplateRows: 'auto 32px auto',
+        }}>
+          {/* Row 1 */}
+          <div style={{ borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+            <Panel
+              step="① JSON"
+              label="Request"
+              sublabel="Client → LegacyBridge"
+              content={jsonReq}
+              color={blueColor}
             />
           </div>
 
-          <div style={{ padding: '12px 16px' }}>
-            <div style={{
-              fontSize: 11, fontWeight: 700, marginBottom: 6,
-              color: isFault ? faultColor : okColor,
-              textTransform: 'uppercase', letterSpacing: '0.05em',
-            }}>
-              {rightLabel}
-            </div>
-            <textarea
-              readOnly
-              value={rightContent}
-              style={{
-                width: '100%', height: 380, resize: 'vertical',
-                fontFamily: 'monospace', fontSize: 11,
-                background: isFault ? 'var(--bg-error, #fff8f8)' : 'var(--bg-code, #f8f9fb)',
-                border: '1px solid ' + (isFault ? faultColor : 'var(--border)'),
-                borderRadius: 4, padding: 8, lineHeight: 1.5,
-                color: 'var(--text)', boxSizing: 'border-box',
-              }}
+          {/* Center top arrow */}
+          <div style={{
+            borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: 2,
+          }}>
+            <FlowArrow dir="→" />
+          </div>
+
+          <div style={{ borderBottom: '1px solid var(--border)' }}>
+            <Panel
+              step="② SOAP"
+              label={soapLabel}
+              sublabel="LegacyBridge → Legacy"
+              content={soapReq}
+              color={purpleColor}
+            />
+          </div>
+
+          {/* Row 2 — vertical arrows */}
+          <div style={{
+            borderRight: '1px solid var(--border)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <FlowArrow dir="↓" label="resp" />
+          </div>
+          <div style={{
+            borderRight: '1px solid var(--border)',
+            background: 'var(--bg-alt, #f5f6f8)',
+          }} />
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <FlowArrow dir="↓" label="req" />
+          </div>
+
+          {/* Row 3 */}
+          <div style={{ borderRight: '1px solid var(--border)' }}>
+            <Panel
+              step="④ JSON"
+              label="Response"
+              sublabel="LegacyBridge → Client"
+              content={jsonResp}
+              color={p4Color}
+              isError={isFault}
+            />
+          </div>
+
+          {/* Center bottom arrow */}
+          <div style={{
+            borderRight: '1px solid var(--border)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: 2,
+          }}>
+            <FlowArrow dir="←" />
+          </div>
+
+          <div>
+            <Panel
+              step="③ SOAP"
+              label={soapRespLabel}
+              sublabel="Legacy → LegacyBridge"
+              content={soapResp}
+              color={p3Color}
+              isError={isFault && !method.faultIsVariant}
             />
           </div>
         </div>
