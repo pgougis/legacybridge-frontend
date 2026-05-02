@@ -21,6 +21,7 @@ const adminNav = (): NavItem[] => [
   { to: '/admin/audit',      icon: '🔍', label: 'Audit Trail' },
   { to: '/admin/chat',       icon: '💬', label: 'Messages' },
   { to: '', href: import.meta.env.VITE_SWAGGER_URL as string || '/swagger', icon: '📖', label: 'Swagger API' },
+  { to: '/admin/manual',     icon: '📘', label: 'Manuel' },
 ]
 
 const managerNav = (): NavItem[] => [
@@ -33,6 +34,7 @@ const managerNav = (): NavItem[] => [
   { to: '/manager/chat',      icon: '💬', label: 'Messages' },
   { to: '/manager/usage',     icon: '📊', label: 'My Usage' },
   { to: '/manager/logs',      icon: '⚠', label: 'API Error Logs' },
+  { to: '/manager/manual',    icon: '📘', label: 'Manuel' },
 ]
 
 const memberNav = (): NavItem[] => [
@@ -41,10 +43,12 @@ const memberNav = (): NavItem[] => [
   { to: '/member/call',       icon: '⚡', label: 'Call Legacy', color: 'green' },
   { to: '/member/chat',       icon: '💬', label: 'Messages' },
   { to: '/member/usage',      icon: '📊', label: 'My Usage' },
+  { to: '/member/manual',     icon: '📘', label: 'Manuel' },
 ]
 
 const viewerNav: NavItem[] = [
   { to: '/viewer/usage',      icon: '📊', label: 'My Usage' },
+  { to: '/viewer/manual',     icon: '📘', label: 'Manuel' },
 ]
 
 function chatRoute(role: string) {

@@ -27,6 +27,7 @@ import Shell            from './components/Shell'
 import Usage            from './pages/shared/Usage'
 import TestBench        from './pages/shared/TestBench'
 import Logs             from './pages/shared/Logs'
+import ManualPage       from './pages/shared/ManualPage'
 
 // Wrapper: passes the current user's own ID to the Usage component
 function UsageSelf() {
@@ -72,6 +73,7 @@ export default function App() {
         <Route path="audit"      element={<AdminAudit />} />
         <Route path="chat"       element={<AdminChat />} />
         <Route path="usage"      element={<UsageSelectable />} />
+        <Route path="manual"     element={<ManualPage />} />
         <Route index element={<Navigate to="dashboard" replace />} />
       </Route>
 
@@ -86,6 +88,7 @@ export default function App() {
         <Route path="call"       element={<ManagerCall />} />
         <Route path="chat"       element={<ManagerChat />} />
         <Route path="usage"      element={<UsageSelectable />} />
+        <Route path="manual"     element={<ManualPage />} />
         <Route index element={<Navigate to="dashboard" replace />} />
       </Route>
 
@@ -96,13 +99,15 @@ export default function App() {
         <Route path="call"       element={<MemberCall />} />
         <Route path="plans"      element={<MemberPlans />} />
         <Route path="usage"      element={<UsageSelf />} />
+        <Route path="manual"     element={<ManualPage />} />
         <Route index element={<Navigate to="sources" replace />} />
       </Route>
 
       {/* Viewer */}
       <Route path="/viewer" element={<RequireAuth roles={['Viewer']}><Shell /></RequireAuth>}>
         <Route index element={<Viewer />} />
-        <Route path="usage" element={<UsageSelf />} />
+        <Route path="usage"  element={<UsageSelf />} />
+        <Route path="manual" element={<ManualPage />} />
       </Route>
 
       {/* Default */}
