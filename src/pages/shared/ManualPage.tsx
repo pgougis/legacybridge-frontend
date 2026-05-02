@@ -1,17 +1,32 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useAuth } from '../../ctx/auth'
 
 // ── Tooltip ───────────────────────────────────────────────────────────────────
 function Tooltip({ children, content }: { children: React.ReactNode; content: React.ReactNode }) {
   const [show, setShow] = useState(false)
+  const ref = React.useRef<HTMLDivElement>(null)
+  const [below, setBelow] = useState(false)
+
+  function handleEnter() {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect()
+      setBelow(rect.top < 220) // pas assez de place en haut → afficher en dessous
+    }
+    setShow(true)
+  }
+
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}
-      onMouseEnter={() => setShow(true)}
+    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}
+      onMouseEnter={handleEnter}
       onMouseLeave={() => setShow(false)}>
       {children}
       {show && (
         <div style={{
-          position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%',
+          position: 'absolute',
+          ...(below
+            ? { top: 'calc(100% + 8px)' }
+            : { bottom: 'calc(100% + 8px)' }),
+          left: '50%',
           transform: 'translateX(-50%)',
           background: '#1a2535', color: '#fff', borderRadius: 8,
           padding: '10px 14px', fontSize: 12, lineHeight: 1.6,
@@ -21,9 +36,12 @@ function Tooltip({ children, content }: { children: React.ReactNode; content: Re
         }}>
           {content}
           <div style={{
-            position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
+            position: 'absolute',
+            ...(below
+              ? { bottom: '100%', borderBottom: '6px solid #1a2535', borderTop: 'none' }
+              : { top: '100%', borderTop: '6px solid #1a2535', borderBottom: 'none' }),
+            left: '50%', transform: 'translateX(-50%)',
             borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
-            borderTop: '6px solid #1a2535',
           }} />
         </div>
       )}
