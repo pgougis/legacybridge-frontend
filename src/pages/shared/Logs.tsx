@@ -45,6 +45,7 @@ export default function Logs({ selectable = false }: Props) {
       userId: selectedId || undefined,
       page,
       pageSize: LOGS_PAGE_SIZE,
+      onlyErrors: true,
     })
       .then(r => { setLogs(r.items); setTotal(r.total) })
       .catch(() => setError('Failed to load logs'))

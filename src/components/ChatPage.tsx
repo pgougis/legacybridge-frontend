@@ -105,10 +105,10 @@ export default function ChatPage() {
           {totalUnread > 0 && <span className="chat-badge">{totalUnread}</span>}
         </div>
 
-        {loadingContacts && <div className="chat-contacts-empty">Chargement…</div>}
+        {loadingContacts && <div className="chat-contacts-empty">Loading…</div>}
 
         {!loadingContacts && contacts.length === 0 && (
-          <div className="chat-contacts-empty">Aucun contact disponible.</div>
+          <div className="chat-contacts-empty">No contacts available.</div>
         )}
 
         {contacts.map(c => (
@@ -138,7 +138,7 @@ export default function ChatPage() {
         {!selected ? (
           <div className="chat-thread-empty">
             <div style={{ fontSize: 40, marginBottom: 12 }}>💬</div>
-            <p>Sélectionnez un contact pour démarrer une conversation.</p>
+            <p>Select a contact to start a conversation.</p>
           </div>
         ) : (
           <>
@@ -156,7 +156,7 @@ export default function ChatPage() {
               {messages.length === 0 && (
                 <div className="chat-thread-empty" style={{ flex: 1 }}>
                   <p style={{ color: 'var(--text-sub)', fontSize: 13 }}>
-                    Aucun message. Commencez la conversation !
+                    No messages yet. Start the conversation!
                   </p>
                 </div>
               )}
@@ -185,7 +185,7 @@ export default function ChatPage() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Écrivez votre message… (Entrée pour envoyer)"
+                placeholder="Write your message… (Enter to send)"
                 disabled={sending}
                 autoFocus
               />
@@ -194,7 +194,7 @@ export default function ChatPage() {
                 onClick={send}
                 disabled={sending || !input.trim()}
               >
-                {sending ? '…' : 'Envoyer'}
+                {sending ? '…' : 'Send'}
               </button>
             </div>
           </>

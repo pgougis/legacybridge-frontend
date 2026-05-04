@@ -48,7 +48,12 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     if (body.includes('EMAIL_NOT_CONFIRMED')) throw new Error('EMAIL_NOT_CONFIRMED')
 
     // Don't try to refresh on login/refresh — would cause an infinite loop
-    if (path === '/auth/login' || path === '/auth/refresh') {
+    if (path === '/auth/login') {
+      // Wrong credentials: just throw so Login.tsx can display the error message
+      throw new Error('Unauthorized')
+    }
+    if (path === '/auth/refresh') {
+      // Refresh token expired/invalid: clear session and redirect to login
       localStorage.removeItem('lb_token')
       localStorage.removeItem('lb_refresh_token')
       window.location.href = '/login'

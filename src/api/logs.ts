@@ -17,17 +17,18 @@ export interface ApiLogsResult {
 }
 
 export const logsApi = {
-  get: (params: { userId?: string; page?: number; pageSize?: number }) => {
+  get: (params: { userId?: string; page?: number; pageSize?: number; onlyErrors?: boolean }) => {
     const qs = new URLSearchParams()
-    if (params.userId)   qs.set('userId',   params.userId)
-    if (params.page)     qs.set('page',     String(params.page))
-    if (params.pageSize) qs.set('pageSize', String(params.pageSize))
+    if (params.userId)                qs.set('userId',     params.userId)
+    if (params.page)                  qs.set('page',       String(params.page))
+    if (params.pageSize)              qs.set('pageSize',   String(params.pageSize))
+    if (params.onlyErrors !== false)  qs.set('onlyErrors', 'true')
     return api.get<ApiLogsResult>(`/api-logs?${qs}`)
   },
 
   downloadTxt: async (userId?: string, scope?: string): Promise<void> => {
     try {
-      const qs = new URLSearchParams({ pageSize: '10000' })
+      const qs = new URLSearchParams({ pageSize: '10000', onlyErrors: 'true' })
       if (userId) qs.set('userId', userId)
       const { items } = await api.get<ApiLogsResult>(`/api-logs?${qs}`)
 
